@@ -46,7 +46,7 @@ parseExpr [x] = if (isAlpha (head x)) then (Var x) else (Constant (read x)) -- p
 parseStmt :: String -> [String] -> Stmt
 parseStmt "let" (v:"=":expr) = Let v (parseExpr expr)
 parseStmt "print" (expr) = Print (parseExpr expr)
-parseStmt "if" (expr, "goto", label) = IfGoto (parseExpr expr) label
+parseStmt "if" (expr, "goto", label) = IfGoto (parseExpr expr) label -- issues with pattern matching
 parseStmt "input" varName = Input (parseExpr varName)
 
 -- takes a list of tokens and returns the parsed statement - the statement may include a leading label
@@ -68,12 +68,12 @@ eval (Plus e1 e2) env = (eval e1 env) + (eval e2 env)
 eval (Minus e1 e2) env = (eval e1 env) - (eval e2 env)
 eval (Mult e1 e2) env = (eval e1 env) * (eval e2 env)
 eval (Divide e1 e2) env = (eval e1 env) / (eval e2 env)
-eval (LessThan e1 e2) env = if (eval e1 env) < (eval e2 env) then True else False
-eval (GreaterThan e1 e2) env = if (eval e1 env) > (eval e2 env) then True else False
-eval (LessThanEQ e1 e2) env = if (eval e1 env) <= (eval e2 env) then True else False
-eval (GreaterThanEQ e1 e2) env = if (eval e1 env) >= (eval e2 env) then True else False
-eval (Equals e1 e2) env = if (eval e1 env) == (eval e2 env) then True else False
-eval (NotEquals e1 e2) env = if (eval e1 env) != (eval e2 env) then True else False
+eval (LessThan e1 e2) env = (eval e1 env) < (eval e2 env)
+eval (GreaterThan e1 e2) env = (eval e1 env) > (eval e2 env)
+eval (LessThanEQ e1 e2) env = (eval e1 env) <= (eval e2 env)
+eval (GreaterThanEQ e1 e2) env = (eval e1 env) >= (eval e2 env)
+eval (Equals e1 e2) env = (eval e1 env) == (eval e2 env)
+eval (NotEquals e1 e2) env = (eval e1 env) /= (eval e2 env)
 
 -- given a statement, a ST, line number, input and previous output, return an updated ST, input, output, and line number
 -- this starter version ignores the input and line number
