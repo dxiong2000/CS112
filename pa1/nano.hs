@@ -25,18 +25,29 @@ data Stmt =
 
 -- dummy predicate that is supposed to check if a string is a label which is a string ending with ":"
 isLabel :: String -> Bool
-isLabel (str:":") = True -- if str ends with a :, then return true
+isLabel (str:":") = True -- if str ends with a :, then it is a label and return true
 isLabel _ = False
 
 -- takes a list of tokens as strings and returns the parsed expression
 parseExpr :: [String] -> Expr
-parseExpr (e1:"+":e2:[]) = Plus (parseExpr [e1]) (parseExpr [e2])
-parseExpr [x] = if (isAlpha (head x)) then (Var x) else (Constant (read x))
+parseExpr (e1:"+":e2:[]) = Plus (parseExpr [e1]) (parseExpr [e2]) -- parses addition expression ie: ["x", "+", "1"] = Plus x 1
+parseExpr (e1:"-":e2:[]) = Minus (parseExpr [e1]) (parseExpr [e2])
+parseExpr (e1:"*":e2:[]) = Mult (parseExpr [e1]) (parseExpr [e2])
+parseExpr (e1:"/":e2:[]) = Divide (parseExpr [e1]) (parseExpr [e2])
+parseExpr (e1:"<":e2:[]) = LessThan (parseExpr [e1]) (parseExpr[e2])
+parseExpr (e1:">":e2:[]) = GreaterThan (parseExpr [e1]) (parseExpr[e2])
+parseExpr (e1:"<=":e2:[]) = LessThanEQ (parseExpr [e1]) (parseExpr[e2])
+parseExpr (e1:">=":e2:[]) = GreaterThanEQ (parseExpr [e1]) (parseExpr[e2])
+parseExpr (e1:"==":e2:[]) = Equals (parseExpr [e1]) (parseExpr [e2])
+parseExpr (e1:"!=":e2:[]) = NotEquals (parseExpr [e1]) (parseExpr [e2])
+parseExpr [x] = if (isAlpha (head x)) then (Var x) else (Constant (read x)) -- pattern matches the most basic elements, ie: var names and constants (turns constant into int)
 
 -- takes the first token which should be a keyword and a list of the remaining tokens and returns the parsed Stmt
 parseStmt :: String -> [String] -> Stmt
 parseStmt "let" (v:"=":expr) = Let v (parseExpr expr)
 parseStmt "print" expr = Print (parseExpr expr)
+parseStmt "if" expr1 "goto" label = IfGoto (parseExpr expr1) (label)
+parseStmt "input" varName = Input varName
 
 -- takes a list of tokens and returns the parsed statement - the statement may include a leading label
 parseLine :: [String] -> Stmt
