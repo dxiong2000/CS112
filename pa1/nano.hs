@@ -4,24 +4,25 @@ import System.IO
 -- maps labels line numbers and variables to values - uses float for line numbers for simplicity
 type SymTable = [(String,Float)]
 
-data Expr = Constant Float |
-	 Var String |
-	 Plus Expr Expr |
-	 Minus Expr Expr | 
-	 Mult Expr Expr | 
-	 Divide Expr Expr |
-	 LessThan Expr Expr |
-	 GreaterThan Expr Expr |
-	 LessThanEQ Expr Expr |
-	 GreaterThanEQ Expr Expr |
-	 Equals Expr Expr |
-	 NotEquals Expr Expr deriving (Show) 
+data Expr = 
+     Constant Float |
+     Var String |
+     Plus Expr Expr |
+     Minus Expr Expr | 
+     Mult Expr Expr | 
+     Divide Expr Expr |
+     LessThan Expr Expr |
+     GreaterThan Expr Expr |
+     LessThanEQ Expr Expr |
+     GreaterThanEQ Expr Expr |
+     Equals Expr Expr |
+     NotEquals Expr Expr deriving (Show) 
 
 data Stmt =
-     Let Expr Expr |
+     Let String Expr |
      Print [Expr] |
      IfGoto Expr String |
-     Input Expr deriving (Show) 
+     Input String deriving (Show) 
 
 -- dummy predicate that is supposed to check if a string is a label which is a string ending with ":"
 isLabel :: String -> Bool
@@ -45,15 +46,15 @@ parseExpr [x] = if (isAlpha (head x)) then (Var x) else (Constant (read x)) -- p
 -- takes the first token which should be a keyword and a list of the remaining tokens and returns the parsed Stmt
 parseStmt :: String -> [String] -> Stmt
 parseStmt "let" (v:"=":expr) = Let v (parseExpr expr)
-parseStmt "print" (expr) = Print (parseExpr expr)
-parseStmt "if" (expr, "goto", label) = IfGoto (parseExpr expr) label -- issues with pattern matching
-parseStmt "input" varName = Input (parseExpr varName)
+parseStmt "print" expr = Print [parseExpr expr]
+parseStmt "if" rest = IfGoto (parseExpr (init (init rest))) (last rest)
+parseStmt "input" [varName] = Input varName
 
 -- takes a list of tokens and returns the parsed statement - the statement may include a leading label
 parseLine :: [String] -> Stmt
 parseLine (first:rest) =
-	  if (isLabel first) then parseLine rest -- if the first string is a label, then run parseLine again on the remaining strings, which now should be a Statement
-	  else parseStmt first rest -- if the first string isnt a label, then this line is a Statement
+      if (isLabel first) then parseLine rest -- if the first string is a label, then run parseLine again on the remaining strings, which now should be a Statement
+      else parseStmt first rest -- if the first string isnt a label, then this line is a Statement
 
 -- takes a variable name and a ST and returns the value of that variable or zero if the variable is not in the ST
 lookupVar :: String -> SymTable -> Float
@@ -68,18 +69,18 @@ eval (Plus e1 e2) env = (eval e1 env) + (eval e2 env)
 eval (Minus e1 e2) env = (eval e1 env) - (eval e2 env)
 eval (Mult e1 e2) env = (eval e1 env) * (eval e2 env)
 eval (Divide e1 e2) env = (eval e1 env) / (eval e2 env)
-eval (LessThan e1 e2) env = (eval e1 env) < (eval e2 env)
-eval (GreaterThan e1 e2) env = (eval e1 env) > (eval e2 env)
-eval (LessThanEQ e1 e2) env = (eval e1 env) <= (eval e2 env)
-eval (GreaterThanEQ e1 e2) env = (eval e1 env) >= (eval e2 env)
-eval (Equals e1 e2) env = (eval e1 env) == (eval e2 env)
-eval (NotEquals e1 e2) env = (eval e1 env) /= (eval e2 env)
+eval (LessThan e1 e2) env = if (eval e1 env) < (eval e2 env) then 1 else 0
+eval (GreaterThan e1 e2) env = if (eval e1 env) > (eval e2 env) then 1 else 0
+eval (LessThanEQ e1 e2) env = if (eval e1 env) <= (eval e2 env) then 1 else 0
+eval (GreaterThanEQ e1 e2) env = if (eval e1 env) >= (eval e2 env) then 1 else 0
+eval (Equals e1 e2) env = if (eval e1 env) == (eval e2 env) then 1 else 0
+eval (NotEquals e1 e2) env = if (eval e1 env) /= (eval e2 env) then 1 else 0
 
 -- given a statement, a ST, line number, input and previous output, return an updated ST, input, output, and line number
 -- this starter version ignores the input and line number
 -- Stmt, SymTable, progCounter, input, output, (SymTable', input', output', progCounter)
 perform:: Stmt -> SymTable -> Float -> [String] ->String -> (SymTable, [String], String, Float)
-perform (Print e) env lineNum input output = (env, input, output++(show (eval e env)++"\n"), lineNum+1) -- Print e now takes e as [String], so find a way to make it print the list
+perform (Print e) env lineNum input output = (env, input, output++(show (eval (head e) env)++"\n"), lineNum+1) -- Print e now takes e as [String], so find a way to make it print the list
 perform (Let id e) env lineNum input output = ((id,(eval e env)):env, input, output, lineNum+1)
 
 -- given a list of Stmts, a ST, and current output, perform all of the statements in the list and return the updated output String
