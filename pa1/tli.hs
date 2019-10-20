@@ -118,16 +118,17 @@ getStmtAtLineNum (x:xs) i = getStmtAtLineNum xs (i-1)
 
 -- given a list of Stmts, a ST, and current output, perform all of the statements in the list and return the updated output String
 run :: [Stmt] -> SymTable -> [String] -> String -> Float -> String
-run [] _ _ output _ = output
 run stmtList env input output lineNum = 
-    let (env1, input1, output1, newLineNum) = perform (getStmtAtLineNum stmtList lineNum) env lineNum input output in run stmtList env1 input1 output1 newLineNum
+    if (lineNum == ((fromIntegral (length stmtList)) + 1.0))
+    then output
+    else let (env1, input1, output1, newLineNum) = perform (getStmtAtLineNum stmtList lineNum) env lineNum input output in run stmtList env1 input1 output1 newLineNum
 
 -- given list of list of tokens, a ST, return the list of parsed Stmts and ST storing mapping of labels to line numbers
 parseTest :: [[String]] -> SymTable -> ([Stmt], SymTable)
 parseTest []  st = ([], st)
 parseTest allLines env = runParseLine allLines [] env 1
 
-
+--let allLines = [["let", "x", "=", "1"], ["print", "x"]]
 main = do
      input <- getContents -- reads user input from stdin
      args <- getArgs -- gets command line args
@@ -136,9 +137,6 @@ main = do
      let input1 = words input -- formats user input into list
      let allLines = (map words (lines contents)) -- formats file contents into a [[String]]
      let (stmtList, env) = runParseLine allLines [] [] 1 -- gets list of statements and symtable currently storing only labels 
-     let output = (run stmtList env input1 "" 1) -- gets output from run
-     putStrLn (show (typeOf output)) -- returns type [Char] (aka String)
-     putStr output -- THIS FREEZES WHILE RUNNING
-     --putStrLn (show (head str))
-     -- stmtList = [Let x 1, Let y 2, IfGoto (EQ_ x 1) lab1], ST = [("lab1", 2)]
-     --hClose pfile
+     let output = run stmtList env [] "" 1 -- gets output from run
+     putStr output
+     hClose pfile
