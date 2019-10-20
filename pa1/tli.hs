@@ -1,6 +1,7 @@
 import Data.Char
 import System.IO
 import System.Environment
+import System.Exit
 import Data.Typeable
 
 -- maps labels line numbers and variables to values - uses float for line numbers for simplicity
@@ -18,7 +19,8 @@ data Expr =
      LE_ Expr Expr |
      GE_ Expr Expr |
      EQ_ Expr Expr |
-     NEQ_ Expr Expr deriving (Show) 
+     NEQ_ Expr Expr |
+     ExprError String deriving (Show, Eq) 
 
 data Stmt =
      Let String Expr |
@@ -32,6 +34,7 @@ isLabel str = if ((last str) == ':') then True else False
 
 -- takes a list of tokens as strings and returns the parsed expression
 parseExpr :: [String] -> Expr
+parseExpr ("\"done\"":[]) = ExprError "\"done\""
 parseExpr (e1:"+":e2:[]) = Plus (parseExpr [e1]) (parseExpr [e2]) -- parses addition expression ie: ["x", "+", "1"] = Plus x 1
 parseExpr (e1:"-":e2:[]) = Minus (parseExpr [e1]) (parseExpr [e2])
 parseExpr (e1:"*":e2:[]) = Times (parseExpr [e1]) (parseExpr [e2])
@@ -54,14 +57,15 @@ parseStmtPrintHelper (x:xs) curString exprList =
     else parseStmtPrintHelper xs (curString++[x]) exprList
 
 -- takes the first token which should be a keyword and a list of the remaining tokens and returns the parsed Stmt
-parseStmt :: String -> [String] -> Stmt
-parseStmt "let" (v:"=":expr) = Let v (parseExpr expr)
-parseStmt "print" expr = Print (parseStmtPrintHelper expr [] [])
-parseStmt "if" rest = If (parseExpr (init (init rest))) (last rest)
-parseStmt "input" [varName] = Input varName
+parseStmt :: String -> [String] -> Float -> Stmt
+parseStmt "let" (v:"=":expr) _ = Let v (parseExpr expr)
+parseStmt "print" expr _ = Print (parseStmtPrintHelper expr [] [])
+parseStmt "if" rest _ = If (parseExpr (init (init rest))) (last rest)
+parseStmt "input" [varName] _ = Input varName
+parseStmt _ _ lineNum = head (error ("Syntax error on line "++(show lineNum)))
 
--- allLines = [["let", "x", "=", "1"], ["lab1:", "let", "y", "=", "2"], ["if", "x", "==", "1", "goto", "lab1"]]
--- [Let x 1, Let y 2, IfGoto (EQ_ x 1) lab1]
+
+-- recursive function that calls parseLine on each iteration and builds a list of Statements
 runParseLine :: [[String]] -> [Stmt] -> SymTable -> Float -> ([Stmt], SymTable)
 runParseLine [] stmtList env _ = (stmtList, env)
 runParseLine (head:rest) stmtList env lineNumber = 
@@ -70,9 +74,9 @@ runParseLine (head:rest) stmtList env lineNumber =
 -- takes a list of tokens and returns the parsed statement - the statement may include a leading label
 parseLine :: [String] -> SymTable -> Float -> (Stmt, SymTable)
 parseLine (first:rest) env lineNum =
-      if (isLabel first) 
-      then parseLine rest ((first,lineNum):env) lineNum -- if the first string is a label, then run parseLine again on the remaining strings, which now should be a Statement
-      else ((parseStmt first rest), env) -- if the first string isnt a label, then this line is a Statement
+     if (isLabel first) 
+     then parseLine rest ((first,lineNum):env) lineNum -- if the first string is a label, then run parseLine again on the remaining strings, which now should be a Statement
+     else ((parseStmt first rest lineNum), env) -- if the first string isnt a label, then this line is a Statement
 
 -- takes a variable name and a ST and returns the value of that variable or zero if the variable is not in the ST
 lookupVar :: String -> SymTable -> Float
@@ -99,7 +103,9 @@ eval (NEQ_ e1 e2) env = if (eval e1 env) /= (eval e2 env) then 1 else 0
 printHelper :: [Expr] -> SymTable -> String -> String
 printHelper [] _ output = output
 printHelper (e:es) env output = 
-    let out = show (eval e env) in printHelper es env output++out++"\n"
+    if (e == ExprError "\"done\"")
+    then printHelper es env output++"done"++"\n"
+    else let out = show (eval e env) in printHelper es env output++out++"\n"
 
 -- given a statement, a ST, line number, input and previous output, return an updated ST, input, output, and line number
 -- this starter version ignores the input and line number
@@ -111,7 +117,8 @@ perform (Let id e) env lineNum input output = ((id,(eval e env)):env, input, out
 perform (If expr label) env lineNum input output = if ((eval expr env) == 1) then (env, input, output, (lookupVar (label++":") env)) else (env, input, output, lineNum+1)
 perform (Input varName) env lineNum (x:xs) output = ((varName,(read x)):env, xs, output, lineNum+1)
 
--- [Let x 1, Let y 2, IfGoto (EQ_ x 1) lab1]
+-- helper function for run 
+-- returns Stmt at its respective line number
 getStmtAtLineNum :: [Stmt] -> Float -> Stmt
 getStmtAtLineNum (x:_) 1 = x
 getStmtAtLineNum (x:xs) i = getStmtAtLineNum xs (i-1)
@@ -128,7 +135,7 @@ parseTest :: [[String]] -> SymTable -> ([Stmt], SymTable)
 parseTest []  st = ([], st)
 parseTest allLines env = runParseLine allLines [] env 1
 
---let allLines = [["let", "x", "=", "1"], ["print", "x"]]
+
 main = do
      input <- getContents -- reads user input from stdin
      args <- getArgs -- gets command line args
@@ -136,7 +143,7 @@ main = do
      contents <- hGetContents pfile -- gets file contents
      let input1 = words input -- formats user input into list
      let allLines = (map words (lines contents)) -- formats file contents into a [[String]]
-     let (stmtList, env) = runParseLine allLines [] [] 1 -- gets list of statements and symtable currently storing only labels 
-     let output = run stmtList env [] "" 1 -- gets output from run
+     let (stmtList, env) = runParseLine allLines [] [] 1 -- gets list of statements and symtable currently storing only labels
+     let output = run stmtList env input1 "" 1 -- gets output from run
      putStr output
      hClose pfile
