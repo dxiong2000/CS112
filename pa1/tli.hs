@@ -62,7 +62,7 @@ parseStmt "let" (v:"=":expr) _ = Let v (parseExpr expr)
 parseStmt "print" expr _ = Print (parseStmtPrintHelper expr [] [])
 parseStmt "if" rest _ = If (parseExpr (init (init rest))) (last rest)
 parseStmt "input" [varName] _ = Input varName
-parseStmt _ _ lineNum = head (error ("Syntax error on line "++(show lineNum)))
+parseStmt _ _ lineNum = error ("Syntax error on line "++(show lineNum))
 
 
 -- recursive function that calls parseLine on each iteration and builds a list of Statements
@@ -79,42 +79,44 @@ parseLine (first:rest) env lineNum =
      else ((parseStmt first rest lineNum), env) -- if the first string isnt a label, then this line is a Statement
 
 -- takes a variable name and a ST and returns the value of that variable or zero if the variable is not in the ST
-lookupVar :: String -> SymTable -> Float
-lookupVar name [] = 0
-lookupVar name ((id,v):rest) = if (id == name) then v else lookupVar name rest
+lookupVar :: String -> SymTable -> Float -> Bool -> Float
+lookupVar name [] lineNum isLab = if isLab then error ("Illegal goto "++(show (init name))++" at line "++(show lineNum)) else error ("Undefined variable name "++(show name)++" at line "++(show lineNum))
+lookupVar name ((id,v):rest) lineNum isLab = if (id == name) then v else lookupVar name rest lineNum isLab
+
 
 -- evaluates the given Expr with the variable values found in the given ST
-eval :: Expr -> SymTable -> Float
-eval (Var v) env = lookupVar v env
-eval (Constant v) _ = v
-eval (Plus e1 e2) env = (eval e1 env) + (eval e2 env)
-eval (Minus e1 e2) env = (eval e1 env) - (eval e2 env)
-eval (Times e1 e2) env = (eval e1 env) * (eval e2 env)
-eval (Div e1 e2) env = (eval e1 env) / (eval e2 env)
-eval (LT_ e1 e2) env = if (eval e1 env) < (eval e2 env) then 1 else 0
-eval (GT_ e1 e2) env = if (eval e1 env) > (eval e2 env) then 1 else 0
-eval (LE_ e1 e2) env = if (eval e1 env) <= (eval e2 env) then 1 else 0
-eval (GE_ e1 e2) env = if (eval e1 env) >= (eval e2 env) then 1 else 0
-eval (EQ_ e1 e2) env = if (eval e1 env) == (eval e2 env) then 1 else 0
-eval (NEQ_ e1 e2) env = if (eval e1 env) /= (eval e2 env) then 1 else 0
+eval :: Expr -> SymTable -> Float -> Float
+eval (Var v) env lineNum = lookupVar v env lineNum False
+eval (Constant v) _ _ = v
+eval (Plus e1 e2) env lineNum = (eval e1 env lineNum) + (eval e2 env lineNum)
+eval (Minus e1 e2) env lineNum = (eval e1 env lineNum) - (eval e2 env lineNum)
+eval (Times e1 e2) env lineNum = (eval e1 env lineNum) * (eval e2 env lineNum)
+eval (Div e1 e2) env lineNum = (eval e1 env lineNum) / (eval e2 env lineNum)
+eval (LT_ e1 e2) env lineNum = if (eval e1 env lineNum) < (eval e2 env lineNum) then 1 else 0
+eval (GT_ e1 e2) env lineNum = if (eval e1 env lineNum) > (eval e2 env lineNum) then 1 else 0
+eval (LE_ e1 e2) env lineNum = if (eval e1 env lineNum) <= (eval e2 env lineNum) then 1 else 0
+eval (GE_ e1 e2) env lineNum = if (eval e1 env lineNum) >= (eval e2 env lineNum) then 1 else 0
+eval (EQ_ e1 e2) env lineNum = if (eval e1 env lineNum) == (eval e2 env lineNum) then 1 else 0
+eval (NEQ_ e1 e2) env lineNum = if (eval e1 env lineNum) /= (eval e2 env lineNum) then 1 else 0
 
 -- helper function for perform's Print pattern match
 -- takes list of expressions [Expr] and adds them to output
-printHelper :: [Expr] -> SymTable -> String -> String
-printHelper [] _ output = output
-printHelper (e:es) env output = 
+printHelper :: [Expr] -> SymTable -> String -> Float -> String
+printHelper [] _ output lineNum = output
+printHelper (e:es) env output lineNum = 
     if (e == ExprError "\"done\"")
-    then printHelper es env output++"done"++"\n"
-    else let out = show (eval e env) in printHelper es env output++out++"\n"
+    then printHelper es env (output++"done"++"\n") lineNum
+    else let out = show (eval e env lineNum) in printHelper es env (output++out++"\n") lineNum
 
 -- given a statement, a ST, line number, input and previous output, return an updated ST, input, output, and line number
 -- this starter version ignores the input and line number
 -- Stmt, SymTable, progCounter, input, output, (SymTable', input', output', progCounter)
 -- Stmt : Print [(x + 1), (x + 2)]
 perform :: Stmt -> SymTable -> Float -> [String] -> String -> (SymTable, [String], String, Float)
-perform (Print exprList) env lineNum input output = (env, input, (printHelper exprList env output), lineNum+1) -- Print e now takes e as [String], so find a way to make it print the list
-perform (Let id e) env lineNum input output = ((id,(eval e env)):env, input, output, lineNum+1)
-perform (If expr label) env lineNum input output = if ((eval expr env) == 1) then (env, input, output, (lookupVar (label++":") env)) else (env, input, output, lineNum+1)
+perform (Print exprList) env lineNum input output = (env, input, (printHelper exprList env output lineNum), lineNum+1) -- Print e now takes e as [String], so find a way to make it print the list
+perform (Let id e) env lineNum input output = ((id,(eval e env lineNum)):env, input, output, lineNum+1)
+perform (If expr label) env lineNum input output = if ((eval expr env lineNum) == 1) then (env, input, output, (lookupVar (label++":") env lineNum True)) else (env, input, output, lineNum+1)
+perform (Input varName) env lineNum [] output = error ("Prelude.read: no parse")
 perform (Input varName) env lineNum (x:xs) output = ((varName,(read x)):env, xs, output, lineNum+1)
 
 -- helper function for run 
