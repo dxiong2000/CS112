@@ -1,3 +1,3 @@
-this is
-a
-test
+input x
+let y = x + 1
+print y

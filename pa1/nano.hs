@@ -50,10 +50,20 @@ parseStmt "print" expr = Print [parseExpr expr]
 parseStmt "if" rest = IfGoto (parseExpr (init (init rest))) (last rest)
 parseStmt "input" [varName] = Input varName
 
+-- allLines = [["let", "x", "=", "1"], ["label:", "lab1", "let", "y", "=", "2"], ["if", "x", "==", "1", "goto", "lab1"]]
+-- [Let x 1, Let y 2, IfGoto (Equals x 1) lab1]
+runParseLine :: [[String]] -> [Stmt] -> SymTable -> Float -> ([Stmt], SymTable)
+runParseLine [] stmtList env _ = (stmtList, env)
+runParseLine (head:rest) stmtList env lineNumber = 
+    let (statement, env1) = parseLine head env lineNumber in runParseLine rest (stmtList++[statement]) env1 (lineNumber+1)
+
 -- takes a list of tokens and returns the parsed statement - the statement may include a leading label
 parseLine :: [String] -> SymTable -> Float -> (Stmt, SymTable)
 parseLine (first:rest) env lineNum =
-      if (isLabel first) then ((first,lineNum):env) >> ((parseLine rest), env) -- if the first string is a label, then run parseLine again on the remaining strings, which now should be a Statement
+      if (isLabel first) 
+      then do
+        let env1 = ((first,lineNum):env)
+        parseLine rest env1 lineNum -- if the first string is a label, then run parseLine again on the remaining strings, which now should be a Statement
       else ((parseStmt first rest), env) -- if the first string isnt a label, then this line is a Statement
 
 -- takes a variable name and a ST and returns the value of that variable or zero if the variable is not in the ST
@@ -79,35 +89,35 @@ eval (NotEquals e1 e2) env = if (eval e1 env) /= (eval e2 env) then 1 else 0
 -- given a statement, a ST, line number, input and previous output, return an updated ST, input, output, and line number
 -- this starter version ignores the input and line number
 -- Stmt, SymTable, progCounter, input, output, (SymTable', input', output', progCounter)
-perform:: Stmt -> SymTable -> Float -> [String] ->String -> (SymTable, [String], String, Float)
+perform:: Stmt -> SymTable -> Float -> [String] -> String -> (SymTable, [String], String, Float)
 perform (Print e) env lineNum input output = (env, input, output++(show (eval (head e) env)++"\n"), lineNum+1) -- Print e now takes e as [String], so find a way to make it print the list
 perform (Let id e) env lineNum input output = ((id,(eval e env)):env, input, output, lineNum+1)
-perform (IfGoto expr label) env lineNum input output = if (eval expr) == 1 then (env, input, output, (lookupVar label env))
-perform (Input varName) env lineNum input output = ((varName, (read (getLine))):env, )
+perform (IfGoto expr label) env lineNum input output = if ((eval expr env) == 1) then (env, input, output, (lookupVar label env)) else (env, input, output, lineNum+1)
+perform (Input varName) env lineNum (x:xs) output = ((varName,(read x)):env, xs, output, lineNum+1)
+
+-- [Let x 1, Let y 2, IfGoto (Equals x 1) lab1]
+getStmtAtLineNum :: [Stmt] -> Float -> Stmt
+getStmtAtLineNum (x:_) 1 = x
+getStmtAtLineNum (x:xs) i = getStmtAtLineNum xs (i-1)
 
 -- given a list of Stmts, a ST, and current output, perform all of the statements in the list and return the updated output String
-run :: [Stmt] -> SymTable -> String -> Float -> String
-run [] _ output _ = output
-run (curr:rest) env output lineNum = 
-    let (env1, _, output1, line) = perform curr env lineNum [] output in run rest env1 output1 line
+run :: [Stmt] -> SymTable -> [String] -> String -> Float -> String
+run [] _ _ output _ = output
+run stmtList env input output lineNum = 
+    let (env1, input1, output1, newLineNum) = perform (getStmtAtLineNum stmtList lineNum) env lineNum input output in run stmtList env1 input1 output1 newLineNum
 
 -- given list of list of tokens, a ST, return the list of parsed Stmts and ST storing mapping of labels to line numbers
 parseTest :: [[String]] -> SymTable -> ([Stmt], SymTable)
 parseTest []  st = ([], st)
-parseTest []
 -- needs completing for partial credit
-
--- allLines = [["let", "x", "=", "1"], ["label:", "lab1", "let", "y", "=", "2"]]
--- [Let x 1, Let y 2]
-runParseLine :: [[String]] -> [Stmt] -> SymTable -> Float -> ([Stmt], SymTable)
-runParseLine [] stmtList env _ = (stmtList, env)
-runParseLine (head:rest) stmtList env lineNumber = 
-    let (statement, env1) = parseLine head env lineNumber in (runParseLine [rest] (stmtList:statement) env1 lineNumber+1)
 
 main = do
      pfile <- openFile "nano1.txt" ReadMode
      contents <- hGetContents pfile
-     allLines = (map words (lines contents)) -- handles/formats input into a [[String]]
-     (stmtList, env) = runParseLine allLines [] [] 1 -- gets list of statements [Stmt] and SymTable env that currently stores (label,lineNum)
-     putStr (run stmtList env "" 1) -- gets output
+     input <- getContents
+     let input1 = words input
+     let allLines = (map words (lines contents)) -- handles/formats input into a [[String]]
+     let (stmtList, env) = runParseLine allLines [] [] 1 in putStr (run stmtList env input1 "" 1) -- gets [Stmt] stmtList and SymTable env that currently stores (label,lineNum)
+     -- stmtList = [Let x 1, Let y 2, IfGoto (Equals x 1) lab1], ST = [("lab1", 2)]
+     
      hClose pfile
