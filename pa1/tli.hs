@@ -1,3 +1,9 @@
+-- Daniel Xiong dxiong5@ucsc.edu id#1660652
+-- tli.hs
+-- due 10/21/19
+-- Pair Programming partner: Scott Zin nzin@ucsc.edu id#1679510
+
+
 import Data.Char
 import System.IO
 import System.Environment
@@ -34,7 +40,7 @@ isLabel str = if ((last str) == ':') then True else False
 
 -- takes a list of tokens as strings and returns the parsed expression
 parseExpr :: [String] -> Expr
-parseExpr ("\"done\"":[]) = ExprError "\"done\""
+parseExpr [x] = if (isAlpha (head x)) then (Var x) else if (isPunctuation (head x)) then (ExprError x) else (Constant (read x))-- pattern matches the most basic elements, ie: var names and constants (turns constant into int)
 parseExpr (e1:"+":e2:[]) = Plus (parseExpr [e1]) (parseExpr [e2]) -- parses addition expression ie: ["x", "+", "1"] = Plus x 1
 parseExpr (e1:"-":e2:[]) = Minus (parseExpr [e1]) (parseExpr [e2])
 parseExpr (e1:"*":e2:[]) = Times (parseExpr [e1]) (parseExpr [e2])
@@ -45,15 +51,15 @@ parseExpr (e1:"<=":e2:[]) = LE_ (parseExpr [e1]) (parseExpr[e2])
 parseExpr (e1:">=":e2:[]) = GE_ (parseExpr [e1]) (parseExpr[e2])
 parseExpr (e1:"==":e2:[]) = EQ_ (parseExpr [e1]) (parseExpr [e2])
 parseExpr (e1:"!=":e2:[]) = NEQ_ (parseExpr [e1]) (parseExpr [e2])
-parseExpr [x] = if (isAlpha (head x)) then (Var x) else (Constant (read x)) -- pattern matches the most basic elements, ie: var names and constants (turns constant into int)
+
 
 -- helper function for parseStmt
 -- takes in unprocessed [String] and returns [Expr]
 parseStmtPrintHelper :: [String] -> [String] -> [Expr] -> [Expr]
-parseStmtPrintHelper [x] curString exprList = exprList++[(parseExpr (curString++[x]))]
+parseStmtPrintHelper [x] curString exprList = if ((last x) /= '"') then exprList++[(parseExpr (curString++[x]))] else exprList++[(parseExpr [(unwords (curString++[x]))])]
 parseStmtPrintHelper (x:xs) curString exprList = 
     if (x == ",")
-    then parseStmtPrintHelper xs [] (exprList++[(parseExpr curString)])
+    then if ((last (last curString)) == '"') then parseStmtPrintHelper xs [] (exprList++[(parseExpr [(unwords curString)])]) else parseStmtPrintHelper xs [] (exprList++[(parseExpr curString)])
     else parseStmtPrintHelper xs (curString++[x]) exprList
 
 -- takes the first token which should be a keyword and a list of the remaining tokens and returns the parsed Stmt
@@ -102,11 +108,11 @@ eval (NEQ_ e1 e2) env lineNum = if (eval e1 env lineNum) /= (eval e2 env lineNum
 -- helper function for perform's Print pattern match
 -- takes list of expressions [Expr] and adds them to output
 printHelper :: [Expr] -> SymTable -> String -> Float -> String
-printHelper [] _ output lineNum = output
-printHelper (e:es) env output lineNum = 
-    if (e == ExprError "\"done\"")
-    then printHelper es env (output++"done"++"\n") lineNum
-    else let out = show (eval e env lineNum) in printHelper es env (output++out++"\n") lineNum
+printHelper [] _ output lineNum = output++"\n"
+printHelper ((ExprError e):es) env output lineNum = 
+    let out = unwords.words $ reverse . dropWhile (not.isAlpha) . reverse $ dropWhile (not.isAlpha) (show e) 
+    in printHelper es env (output++out++" ") lineNum
+printHelper (e:es) env output lineNum = let out = show (eval e env lineNum) in printHelper es env (output++out++" ") lineNum
 
 -- given a statement, a ST, line number, input and previous output, return an updated ST, input, output, and line number
 -- this starter version ignores the input and line number
