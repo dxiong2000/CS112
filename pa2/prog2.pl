@@ -1,8 +1,7 @@
 
 print_trip( Action, Code, Name, time( Hour, Minute)) :-
    upcase_atom( Code, Upper_code),
-   format( "~6s  ~3s  ~s~26|  ~02d:~02d",
-           [Action, Upper_code, Name, Hour, Minute]),
+   format( "~6s  ~3s  ~s~26|  ~`0t~d~30|:~`0t~d~33|", [Action, Upper_code, Name, Hour, Minute]),
    nl.
 
 test :-
@@ -29,18 +28,51 @@ getDist(LatA, LongA, LatB, LongB, Dist) :-
 	Dist is 3956 * C.
 
 % A, B are airport codes, return value Time is time in hours to get from A to B
-travelTime(A, B, Time) :- airport(A, _, LatA, LongA), airport(B, _, LatB, LongB), getDist(LatA, LongA, LatB, LongB, Dist), Time is (Dist / 500).
+haversine(A, B, Time) :- 
+	airport(A, _, LatA, LongA), 
+	airport(B, _, LatB, LongB), 
+	getDist(LatA, LongA, LatB, LongB, Dist), 
+	Time is (Dist / 500).
 
-fly(A, B) :- flight(A, B, _).
-fly(A, B) :- 
-	flight(A, L, _),
-	!,
-	L \= B,
-	fly(L, B).
+travelTime(A, B, Hr, Min) :- 
+	haversine(A, B, Time), 
+	Temp is round(Time * 60), 
+	Min is (Temp mod 60), 
+	Hr is floor(Temp / 60).
+
+addTimes(Hr_1, Min_1, Hr_2, Min_2, Hr_f, Min_f) :- 
+	Temp is (Hr_1 + Hr_2) * 60 + Min_1 + Min_2,
+	Min_f is (Temp mod 60), 
+	Hr_f is floor(Temp / 60).
+
+fly(A, B, ALT) :- 
+	flight(A, B, time(Hr, Min)), 
+	ALT =< (Hr*60 + Min), 
+	airport(A, CityA, _, _),
+	print_trip(depart, A, CityA, time(Hr, Min)),
+	airport(B, CityB, _, _),
+	travelTime(A, B, Hr_travel, Min_travel),
+	addTimes(Hr, Min, Hr_travel, Min_travel, Hr_arrive, Min_arrive),
+	print_trip(arrive, B, CityB, time(Hr_arrive, Min_arrive)). %print list
+fly(A, B, _) :- 
+	flight(A, Layover, time(Hr_depart, Min_depart)),
+	travelTime(A, Layover, Hr_travel, Min_travel),
+	addTimes(Hr_depart, Min_depart, Hr_travel, Min_travel, Hr_afterFlight, Min_afterFlight),
+	addTimes(Hr_afterFlight, Min_afterFlight, 0, 30, Hr_afterLayover, Min_afterLayover),
+	Layover \= B,
+	fly(Layover, Layover2, ) % need to be able to have more than 1 layover... recurse on layover
+	flight(Layover, B, time(Hr_L, Min_L)),
+	LayoverDepartTime is Hr_L*60 + Min_L,
+	LayoverArriveTime is Hr_afterLayover*60 + Min_afterLayover,
+	LayoverDepartTime >= LayoverArriveTime,
+	airport(A, City, _, _),
+	print_trip(depart, A, City, time(Hr_depart, Min_depart)),
+	airport(Layover, CityL, _, _),
+	print_trip(arrive, Layover, CityL, time(Hr_afterFlight, Min_afterFlight)),
+	fly(Layover, B, LayoverArriveTime).
 
 
-main :- read(A),read(B), fly(A, B).
-
+main :- read(A),read(B), fly(A, B, 0).
 
 % database
 airport( atl, 'Atlanta         ', degmin(  33,39 ), degmin(  84,25 ) ).
