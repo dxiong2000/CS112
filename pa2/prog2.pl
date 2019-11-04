@@ -4,9 +4,10 @@ print_trip( Action, Code, Name, time( Hour, Minute)) :-
    format( "~6s  ~3s  ~s~26|  ~`0t~d~30|:~`0t~d~33|", [Action, Upper_code, Name, Hour, Minute]),
    nl.
 
-test :-
-   print_trip( depart, nyc, 'New York City', time( 9, 3)),
-   print_trip( arrive, lax, 'Los Angeles', time( 14, 22)).
+print_itinerary([]).
+print_itinerary([(Action, Code, Name, time(H, M))|T]) :-
+	print_itinerary(T),
+	print_trip(Action, Code, Name, time(H, M)).
 
 
 degToRad(degmin(Deg, Min), Rad) :- 
@@ -45,34 +46,44 @@ addTimes(Hr_1, Min_1, Hr_2, Min_2, Hr_f, Min_f) :-
 	Min_f is (Temp mod 60), 
 	Hr_f is floor(Temp / 60).
 
-fly(A, B, ALT) :- 
-	flight(A, B, time(Hr, Min)), 
-	ALT =< (Hr*60 + Min), 
-	airport(A, CityA, _, _),
-	print_trip(depart, A, CityA, time(Hr, Min)),
+fly(A, B, time(Hr_Current, Min_Current), ItineraryUpdated) :- 
+	% searches for a flight from A to B
+	flight(A, B, time(Hr_Depart, Min_Depart)), 
+	% getting here means there is an A to B flight, but I still have to check to see if it is valid
+	Hr_Current*60+Min_Current =< Hr_Depart*60+Min_Depart,
+	% getting here means it is valid, so now I add add times to get BArrival Time
+	travelTime(A, B, Hr_TravelAToB, Min_TravelAToB),
+	addTimes(Hr_Depart, Min_Depart, Hr_TravelAToB, Min_TravelAToB, Hr_BArrival, Min_BArrival),
 	airport(B, CityB, _, _),
-	travelTime(A, B, Hr_travel, Min_travel),
-	addTimes(Hr, Min, Hr_travel, Min_travel, Hr_arrive, Min_arrive),
-	print_trip(arrive, B, CityB, time(Hr_arrive, Min_arrive)). %print list
-fly(A, B, _) :- 
-	flight(A, Layover, time(Hr_depart, Min_depart)),
-	travelTime(A, Layover, Hr_travel, Min_travel),
-	addTimes(Hr_depart, Min_depart, Hr_travel, Min_travel, Hr_afterFlight, Min_afterFlight),
-	addTimes(Hr_afterFlight, Min_afterFlight, 0, 30, Hr_afterLayover, Min_afterLayover),
+	append([], [(arrive, B, CityB, time(Hr_BArrival, Min_BArrival))], Itinerary),
+	airport(A, CityA, _, _),
+	append(Itinerary, [(depart, A, CityA, time(Hr_Depart, Min_Depart))], ItineraryUpdated).
+
+fly(A, B, time(Hr_Current, Min_Current), ItineraryUpdated) :- 
+	% goes through database and finds flight from A to any layover
+	flight(A, Layover, time(Hr_Depart, Min_Depart)),
+	% checks if the depart time is after our current time
+	Hr_Current*60+Min_Current =< Hr_Depart*60+Min_Depart,
+	% gets travel time from A to Layover
+	travelTime(A, Layover, Hr_TravelAToLayover, Min_TravelAToLayover), 
+	% adds departure time from A and travel time from A to Layover to get time of Arrival at Layover
+	addTimes(Hr_Depart, Min_Depart, Hr_TravelAToLayover, Min_TravelAToLayover, Hr_LayoverArrival, Min_LayoverArrival), 
+	% adds 30 minutes buffer time at Layover
+	addTimes(Hr_LayoverArrival, Min_LayoverArrival, 0, 30, Hr_NewCurrent, Min_NewCurrent),
 	Layover \= B,
-	fly(Layover, Layover2, ) % need to be able to have more than 1 layover... recurse on layover
-	flight(Layover, B, time(Hr_L, Min_L)),
-	LayoverDepartTime is Hr_L*60 + Min_L,
-	LayoverArriveTime is Hr_afterLayover*60 + Min_afterLayover,
-	LayoverDepartTime >= LayoverArriveTime,
-	airport(A, City, _, _),
-	print_trip(depart, A, City, time(Hr_depart, Min_depart)),
+	% finds flights from Layover to B
+	fly(Layover, B, time(Hr_NewCurrent, Min_NewCurrent), Itinerary),
+	% getting here means an ideal path was found, so now we append to Itinerary in reverse order
 	airport(Layover, CityL, _, _),
-	print_trip(arrive, Layover, CityL, time(Hr_afterFlight, Min_afterFlight)),
-	fly(Layover, B, LayoverArriveTime).
+	append(Itinerary, [(arrive, Layover, CityL, time(Hr_LayoverArrival, Min_LayoverArrival))], Itinerary1),
+	airport(A, CityA, _, _),
+	append(Itinerary1, [(depart, A, CityA, time(Hr_Depart, Min_Depart))], ItineraryUpdated).
 
-
-main :- read(A),read(B), fly(A, B, 0).
+main :- 
+	read(A),
+	read(B), 
+	fly(A, B, time(0,0), Itinerary), 
+	print_itinerary(Itinerary).
 
 % database
 airport( atl, 'Atlanta         ', degmin(  33,39 ), degmin(  84,25 ) ).
