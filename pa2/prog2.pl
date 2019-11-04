@@ -35,7 +35,7 @@ fly(A, B) :- flight(A, B, _).
 fly(A, B) :- 
 	flight(A, L, _),
 	!,
-	L \= B,
+	L \= B, %huh
 	fly(L, B).
 
 
