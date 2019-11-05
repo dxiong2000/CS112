@@ -1,3 +1,7 @@
+% Daniel Xiong dxiong5@ucsc.edu id#1660652
+% prog2.pl
+% due 11/8/19
+% Pair Programming partner: Scott Zin nzin@ucsc.edu id#1679510
 
 print_trip( Action, Code, Name, time( Hour, Minute)) :-
    upcase_atom( Code, Upper_code),
@@ -46,7 +50,7 @@ addTimes(Hr_1, Min_1, Hr_2, Min_2, Hr_f, Min_f) :-
 	Min_f is (Temp mod 60), 
 	Hr_f is floor(Temp / 60).
 
-fly(A, B, time(Hr_Current, Min_Current), ItineraryUpdated) :- 
+fly(A, B, time(Hr_Current, Min_Current), Itinerary) :- 
 	% searches for a flight from A to B
 	flight(A, B, time(Hr_Depart, Min_Depart)), 
 	% getting here means there is an A to B flight, but I still have to check to see if it is valid
@@ -55,11 +59,11 @@ fly(A, B, time(Hr_Current, Min_Current), ItineraryUpdated) :-
 	travelTime(A, B, Hr_TravelAToB, Min_TravelAToB),
 	addTimes(Hr_Depart, Min_Depart, Hr_TravelAToB, Min_TravelAToB, Hr_BArrival, Min_BArrival),
 	airport(B, CityB, _, _),
-	append([], [(arrive, B, CityB, time(Hr_BArrival, Min_BArrival))], Itinerary),
+	append([], [(arrive, B, CityB, time(Hr_BArrival, Min_BArrival))], ItineraryUpdated),
 	airport(A, CityA, _, _),
-	append(Itinerary, [(depart, A, CityA, time(Hr_Depart, Min_Depart))], ItineraryUpdated).
+	append(ItineraryUpdated, [(depart, A, CityA, time(Hr_Depart, Min_Depart))], Itinerary).
 
-fly(A, B, time(Hr_Current, Min_Current), ItineraryUpdated) :- 
+fly(A, B, time(Hr_Current, Min_Current), Itinerary) :- 
 	% goes through database and finds flight from A to any layover
 	flight(A, Layover, time(Hr_Depart, Min_Depart)),
 	% checks if the depart time is after our current time
@@ -72,12 +76,12 @@ fly(A, B, time(Hr_Current, Min_Current), ItineraryUpdated) :-
 	addTimes(Hr_LayoverArrival, Min_LayoverArrival, 0, 30, Hr_NewCurrent, Min_NewCurrent),
 	Layover \= B,
 	% finds flights from Layover to B
-	fly(Layover, B, time(Hr_NewCurrent, Min_NewCurrent), Itinerary),
+	fly(Layover, B, time(Hr_NewCurrent, Min_NewCurrent), ItineraryUpdated),
 	% getting here means an ideal path was found, so now we append to Itinerary in reverse order
 	airport(Layover, CityL, _, _),
-	append(Itinerary, [(arrive, Layover, CityL, time(Hr_LayoverArrival, Min_LayoverArrival))], Itinerary1),
+	append(ItineraryUpdated, [(arrive, Layover, CityL, time(Hr_LayoverArrival, Min_LayoverArrival))], ItineraryUpdated1),
 	airport(A, CityA, _, _),
-	append(Itinerary1, [(depart, A, CityA, time(Hr_Depart, Min_Depart))], ItineraryUpdated).
+	append(ItineraryUpdated1, [(depart, A, CityA, time(Hr_Depart, Min_Depart))], Itinerary).
 
 main :- 
 	read(A),
