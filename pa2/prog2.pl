@@ -39,49 +39,55 @@ haversine(A, B, Time) :-
 	getDist(LatA, LongA, LatB, LongB, Dist), 
 	Time is (Dist / 500).
 
+% A, B are airport codes, calls haversine() and returns Hr, Min correctly formatted
 travelTime(A, B, Hr, Min) :- 
 	haversine(A, B, Time), 
 	Temp is round(Time * 60), 
 	Min is (Temp mod 60), 
 	Hr is floor(Temp / 60).
 
+% helper function to add Hrs and Mins
 addTimes(Hr_1, Min_1, Hr_2, Min_2, Hr_f, Min_f) :- 
 	Temp is (Hr_1 + Hr_2) * 60 + Min_1 + Min_2,
 	Min_f is (Temp mod 60), 
 	Hr_f is floor(Temp / 60).
 
+% main logic/recursive function
 fly(A, B, time(Hr_Current, Min_Current), Itinerary) :- 
-	% searches for a flight from A to B
-	flight(A, B, time(Hr_Depart, Min_Depart)), 
-	% getting here means there is an A to B flight, but I still have to check to see if it is valid
-	Hr_Current*60+Min_Current =< Hr_Depart*60+Min_Depart,
-	% getting here means it is valid, so now I add add times to get BArrival Time
+	% searches for a flight from A to B. finds flights until none are valid
+	flight(A, B, time(Hr_DepartA, Min_DepartA)), 
+	% getting here means there is an A to B flight, but we still have to check to see if it is valid
+	Hr_Current*60+Min_Current =< Hr_DepartA*60+Min_DepartA,
+	% getting here means the flight is valid, so now we add A Departure times with A to B Travel times to get B Arrival Time
 	travelTime(A, B, Hr_TravelAToB, Min_TravelAToB),
-	addTimes(Hr_Depart, Min_Depart, Hr_TravelAToB, Min_TravelAToB, Hr_BArrival, Min_BArrival),
+	addTimes(Hr_DepartA, Min_DepartA, Hr_TravelAToB, Min_TravelAToB, Hr_BArrival, Min_BArrival),
+	% appends arrive B to Itinerary list
 	airport(B, CityB, _, _),
 	append([], [(arrive, B, CityB, time(Hr_BArrival, Min_BArrival))], ItineraryUpdated),
+	% appends depart A to Itinerary list
 	airport(A, CityA, _, _),
-	append(ItineraryUpdated, [(depart, A, CityA, time(Hr_Depart, Min_Depart))], Itinerary).
-
+	append(ItineraryUpdated, [(depart, A, CityA, time(Hr_DepartA, Min_DepartA))], Itinerary).
 fly(A, B, time(Hr_Current, Min_Current), Itinerary) :- 
 	% goes through database and finds flight from A to any layover
-	flight(A, Layover, time(Hr_Depart, Min_Depart)),
+	flight(A, Layover, time(Hr_DepartA, Min_DepartA)),
 	% checks if the depart time is after our current time
-	Hr_Current*60+Min_Current =< Hr_Depart*60+Min_Depart,
+	Hr_Current*60+Min_Current =< Hr_DepartA*60+Min_DepartA,
 	% gets travel time from A to Layover
 	travelTime(A, Layover, Hr_TravelAToLayover, Min_TravelAToLayover), 
 	% adds departure time from A and travel time from A to Layover to get time of Arrival at Layover
-	addTimes(Hr_Depart, Min_Depart, Hr_TravelAToLayover, Min_TravelAToLayover, Hr_LayoverArrival, Min_LayoverArrival), 
+	addTimes(Hr_DepartA, Min_DepartA, Hr_TravelAToLayover, Min_TravelAToLayover, Hr_LayoverArrival, Min_LayoverArrival), 
 	% adds 30 minutes buffer time at Layover
 	addTimes(Hr_LayoverArrival, Min_LayoverArrival, 0, 30, Hr_NewCurrent, Min_NewCurrent),
 	Layover \= B,
 	% finds flights from Layover to B
 	fly(Layover, B, time(Hr_NewCurrent, Min_NewCurrent), ItineraryUpdated),
-	% getting here means an ideal path was found, so now we append to Itinerary in reverse order
+	% getting here means an ideal path was found (fly(Layover, B) returned True from the basecase), so now we append to Itinerary in reverse order
+	% appends arrive Layover to Itinerary list
 	airport(Layover, CityL, _, _),
 	append(ItineraryUpdated, [(arrive, Layover, CityL, time(Hr_LayoverArrival, Min_LayoverArrival))], ItineraryUpdated1),
+	% appends arrive A to Itinerary list
 	airport(A, CityA, _, _),
-	append(ItineraryUpdated1, [(depart, A, CityA, time(Hr_Depart, Min_Depart))], Itinerary).
+	append(ItineraryUpdated1, [(depart, A, CityA, time(Hr_DepartA, Min_DepartA))], Itinerary).
 
 main :- 
 	read(A),
@@ -118,7 +124,7 @@ flight( atl, mia, time( 11,30 ) ).
 flight( chi, nyc, time( 12, 0 ) ).
 flight( lax, atl, time( 12, 0 ) ).
 flight( lax, sfo, time( 12, 0 ) ).
-flight( lax, sjc, time( 12, 15 ) ).
+flight( lax, sjc, time( 12,15 ) ).
 flight( nyc, bos, time( 12,15 ) ).
 flight( bos, nyc, time( 12,30 ) ).
 flight( den, chi, time( 12,30 ) ).
