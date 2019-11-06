@@ -78,7 +78,6 @@ fly(A, B, time(Hr_Current, Min_Current), Itinerary) :-
 	addTimes(Hr_DepartA, Min_DepartA, Hr_TravelAToLayover, Min_TravelAToLayover, Hr_LayoverArrival, Min_LayoverArrival), 
 	% adds 30 minutes buffer time at Layover
 	addTimes(Hr_LayoverArrival, Min_LayoverArrival, 0, 30, Hr_NewCurrent, Min_NewCurrent),
-	Layover \= B,
 	% finds flights from Layover to B
 	fly(Layover, B, time(Hr_NewCurrent, Min_NewCurrent), ItineraryUpdated),
 	% getting here means an ideal path was found (fly(Layover, B) returned True from the basecase), so now we append to Itinerary in reverse order
@@ -92,6 +91,7 @@ fly(A, B, time(Hr_Current, Min_Current), Itinerary) :-
 main :- 
 	read(A),
 	read(B), 
+	A \= B, % no round trips
 	fly(A, B, time(0,0), Itinerary), 
 	print_itinerary(Itinerary).
 
