@@ -53,6 +53,7 @@ addTimes(Hr_1, Min_1, Hr_2, Min_2, Hr_f, Min_f) :-
 	Hr_f is floor(Temp / 60).
 
 % main logic/recursive function
+% fly(Origin city A, Destination City B, Time, Itinerary of flights)
 fly(A, B, time(Hr_Current, Min_Current), Itinerary) :- 
 	% searches for a flight from A to B. finds flights until none are valid
 	flight(A, B, time(Hr_DepartA, Min_DepartA)), 
@@ -78,6 +79,8 @@ fly(A, B, time(Hr_Current, Min_Current), Itinerary) :-
 	addTimes(Hr_DepartA, Min_DepartA, Hr_TravelAToLayover, Min_TravelAToLayover, Hr_LayoverArrival, Min_LayoverArrival), 
 	% adds 30 minutes buffer time at Layover
 	addTimes(Hr_LayoverArrival, Min_LayoverArrival, 0, 30, Hr_NewCurrent, Min_NewCurrent),
+	% flight cannot leave after midnight
+	Hr_NewCurrent*60+Min_NewCurrent < 1440,
 	% finds flights from Layover to B
 	fly(Layover, B, time(Hr_NewCurrent, Min_NewCurrent), ItineraryUpdated),
 	% getting here means an ideal path was found (fly(Layover, B) returned True from the basecase), so now we append to Itinerary in reverse order
