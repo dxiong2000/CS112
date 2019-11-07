@@ -1,4 +1,9 @@
 #! /usr/bin/env python3
+'''
+Daniel Xiong dxiong5@ucsc.edu id#1660652
+tli.py
+Pair Programming partner: Scott Zin nzin@ucsc.edu id#1679510
+'''
 import fileinput
 import sys
 
@@ -19,9 +24,23 @@ class Expr :
     # evaluate this expression given the environment of the symTable
     def eval(self, symTable):
         if self.operator == "var":
-            return symTable[op1]
+            return symTable[self.op1]
+        elif self.operator == "constant":
+        	return symTable[self.op1]
+        elif self.operator == "plus":
+        	return symTable[self.op1]+symTable[self.op2]
+        elif self.operator == "minus":
+        	return symTable[self.op1]-symTable[self.op2]
+        elif self.operator == "mult":
+        	return symTable[self.op1]*symTable[self.op2]
+        elif self.operator == "div":
+        	return symTable[self.op1]/symTable[self.op2]
+        elif self.operator == "lt":
+        	return 
         else:
             return 0
+
+    def 
 
 # used to store a parsed TL statement
 class Stmt :
@@ -38,3 +57,14 @@ class Stmt :
     # perform/execute this statement given the environment of the symTable
     def perform(self, symTable):
         print ("Doing: " + str(self))
+
+
+def parseLines():
+
+if __name__ == '__main__':
+	infile = sys.argv[1]
+	outfile = sys.argv[2]
+	f = open(infile, "r")
+	fo = open(outfile, "w")
+
+	
