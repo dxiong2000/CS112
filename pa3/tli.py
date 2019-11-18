@@ -5,7 +5,9 @@ tli.py
 Pair Programming partner: Scott Zin nzin@ucsc.edu id#1679510
 '''
 import fileinput
+import io
 import sys
+from sys import stdin
 
 # used to store a parsed TL expressions which are
 # constant numbers, constant strings, variable names, and binary expressions
@@ -20,6 +22,7 @@ class Expr :
             return self.operator + " " + self.op1
         else:
             return self.op1 + " " + self.operator + " " +  self.op2
+
 
     # evaluate this expression given the environment of the symTable
     def eval(self, symTable):
@@ -36,11 +39,20 @@ class Expr :
         elif self.operator == "div":
         	return symTable[self.op1]/symTable[self.op2]
         elif self.operator == "lt":
-        	return 
+        	if 
         else:
             return 0
 
-    def 
+def parseExpr(tokens):
+    	if len(tokens) == 1:
+    		x = tokens[0]
+    		if x[0].isalpha():
+    			return Expr(op1=x, operator='var')
+    		elif x.isnumeric():
+    			return Expr(op1=float(x), operator='constant')
+    		else:
+    			
+    
 
 # used to store a parsed TL statement
 class Stmt :
@@ -59,12 +71,45 @@ class Stmt :
         print ("Doing: " + str(self))
 
 
-def parseLines():
+def runParseLine(lines, stmtList, symTable, lineNum):
+	if len(lines) == 0:
+		return (stmtList, symTable)
+
+	head = lines.pop(0)
+	statement, env = parseLine(head, symTable, lineNum)
+	stmtList.append(statement)
+	lineNum += 1
+	runParseLine(lines, stmtList, env, lineNum)
+
+def parseLine(line, symTable, lineNum):
+	head = line.pop(0)
+	if head.endswith(':'):
+		symTable[head] = lineNum
+		parseLine(line, symTable, lineNum)
+	else:
+		return (parseStmt(head, line, lineNum), symTable)
+
+def parseStmt(head, rest, lineNum):
+
 
 if __name__ == '__main__':
+	# takes in user input
+	inputList = []
+	for line in stdin:
+		if line == "\n":
+			break
+		inputList.append(float(line))
+
+	# reads file
 	infile = sys.argv[1]
-	outfile = sys.argv[2]
-	f = open(infile, "r")
-	fo = open(outfile, "w")
+	with open(infile, "r+") as fin:
+		# contents is a 2D list, where each row is a line, with line number zero indexed
+		contents = [line.strip('\n').strip('\t').strip('\r').split() for line in fin.readlines()]
+
+	print(contents)
+	stmt_list, env = runParseLines(contents, [], {}, 1)
+
+
+
 
 	
