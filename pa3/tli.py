@@ -11,85 +11,145 @@ from sys import stdin
 
 # used to store a parsed TL expressions which are
 # constant numbers, constant strings, variable names, and binary expressions
-class Expr :
-    def __init__(self,op1,operator,op2=None):
-        self.op1 = op1
-        self.operator = operator
-        self.op2 = op2
+class Expr:
+	def __init__(self,operator,op1=None,op2=None):
+		self.op1 = op1
+		self.operator = operator
+		self.op2 = op2
 
-    def __str__(self):
-        if self.op2 == None:
-            return self.operator + " " + self.op1
-        else:
-            return self.op1 + " " + self.operator + " " +  self.op2
+	def __str__(self):
+		if self.op2 == None:
+			return self.operator + " " + str(self.op1)
+		else:
+			return str(self.op1) + " " + self.operator + " " +  str(self.op2)
 
 
-    # evaluate this expression given the environment of the symTable
-    def eval(self, symTable):
-        if self.operator == "var":
-            return symTable[self.op1]
-        elif self.operator == "constant":
-        	return symTable[self.op1]
-        elif self.operator == "plus":
-        	return symTable[self.op1]+symTable[self.op2]
-        elif self.operator == "minus":
-        	return symTable[self.op1]-symTable[self.op2]
-        elif self.operator == "mult":
-        	return symTable[self.op1]*symTable[self.op2]
-        elif self.operator == "div":
-        	return symTable[self.op1]/symTable[self.op2]
-        elif self.operator == "lt":
-        	if 
-        else:
-            return 0
+	# evaluate this expression given the environment of the symTable
+	def eval(self, symTable):
+		if self.operator == "var":
+			return symTable[self.op1]
+		elif self.operator == "constant":
+			return self.op1
+		elif self.operator == "plus":
+			return symTable[self.op1]+symTable[self.op2]
+		elif self.operator == "minus":
+			return symTable[self.op1]-symTable[self.op2]
+		elif self.operator == "mult":
+			return symTable[self.op1]*symTable[self.op2]
+		elif self.operator == "div":
+			return symTable[self.op1]/symTable[self.op2]
+		elif self.operator == "lt":
+			if self.op1 < self.op2:
+				return 1
+			else:
+				return 0
+		elif self.operator == "lt":
+			if self.op1 < self.op2:
+				return 1
+			else:
+				return 0
+		elif self.operator == "gt":
+			if self.op1 > self.op2:
+				return 1
+			else:
+				return 0
+		elif self.operator == "le":
+			if self.op1 <= self.op2:
+				return 1
+			else:
+				return 0
+		elif self.operator == "ge":
+			if self.op1 >= self.op2:
+				return 1
+			else:
+				return 0
+		elif self.operator == "eq":
+			if self.op1 == self.op2:
+				return 1
+			else:
+				return 0
+		elif self.operator == "neq":
+			if self.op1 != self.op2:
+				return 1
+			else:
+				return 0
+		else:
+			print("I should not be seeing this message.")
+			return 0
 
 def parseExpr(tokens):
-    	if len(tokens) == 1:
-    		x = tokens[0]
-    		if x[0].isalpha():
-    			return Expr(op1=x, operator='var')
-    		elif x.isnumeric():
-    			return Expr(op1=float(x), operator='constant')
-    		else:
-    			
-    
+	# if there is only one token
+	if len(tokens) == 1: 
+		x = tokens[0]
+		if x[0].isalpha(): # if the token is a variable
+			return list([Expr(op1=x, operator='var')])
+		elif x.isnumeric(): # if the token is a number
+			return list([Expr(op1=float(x), operator='constant')])
+		else:
+			print("Error message here maybe")
+			return [Expr(operator='ExprError')]
+
+	
 
 # used to store a parsed TL statement
 class Stmt :
-    def __init__(self,keyword,exprs):
-        self.keyword = keyword
-        self.exprs = exprs
+	def __init__(self,keyword,var=None,gotoLabel=None,exprs=None):
+		self.keyword = keyword
+		self.exprs = exprs
+		self.var = var
+		self.gotoLabel = gotoLabel
 
-    def __str__(self):
-        others = ""
-        for exp in self.exprs:
-            others = others + " " + str(exp)
-        return self.keyword + others
+	def __str__(self):
+		others = ""
+		if self.keyword == 'let':
+			others = others + " " + self.var
+			for exp in self.exprs:
+				others = others + " " + str(exp)
+		elif self.keyword == 'print':
+			for exp in self.exprs:
+				others = others + " " + str(exp)
+		elif self.keyword == 'if':
+			for exp in self.exprs:
+				others = others + " " + str(exp)
+			others = others + ' goto ' + self.gotoLabel
+		elif self.keyword == 'input':
+			others = others + " " + self.var
+		return self.keyword + others
 
-    # perform/execute this statement given the environment of the symTable
-    def perform(self, symTable):
-        print ("Doing: " + str(self))
+	# perform/execute this statement given the environment of the symTable
+	def perform(self, symTable):
+		print ("Doing: " + str(self))
 
 
-def runParseLine(lines, stmtList, symTable, lineNum):
+def parseLine(lines, stmtList, symTable):
 	if len(lines) == 0:
 		return (stmtList, symTable)
 
-	head = lines.pop(0)
-	statement, env = parseLine(head, symTable, lineNum)
-	stmtList.append(statement)
-	lineNum += 1
-	runParseLine(lines, stmtList, env, lineNum)
+	for i, line in enumerate(lines):
+		lineNum = i + 1
+		if line[0].endswith(':'):
+			symTable[line[0]] = lineNum
+			statement = parseStmt(line[1:], lineNum)
+		else:
+			statement = parseStmt(line, lineNum)
+		stmtList.append(statement)
 
-def parseLine(line, symTable, lineNum):
-	head = line.pop(0)
-	if head.endswith(':'):
-		symTable[head] = lineNum
-		parseLine(line, symTable, lineNum)
+	return (stmtList, symTable)
+
+def parseStmt(line, lineNum):
+	if line[0] == 'let' and line[-2] == '=':
+		exprList = parseExpr(line[-1])
+		return Stmt(keyword=line[0], var=line[1], exprs=exprList)
+	elif line[0] == 'print':
+		exprList = parseExpr(line[1:])
+		return Stmt(keyword=line[0], exprs=exprList)
+	elif line[0] == 'if' and line[-2] == 'goto':
+		exprList = parseExpr(line[1:-2])
+		return Stmt(keyword=line[0], gotoLabel=line[-1], exprs=exprList)
+	elif line[0] == 'input':
+		return Stmt(keyword=line[0], var=line[1])
 	else:
-		return (parseStmt(head, line, lineNum), symTable)
-
-def parseStmt(head, rest, lineNum):
+		print("Syntax error on line", lineNum)
 
 
 if __name__ == '__main__':
@@ -107,7 +167,7 @@ if __name__ == '__main__':
 		contents = [line.strip('\n').strip('\t').strip('\r').split() for line in fin.readlines()]
 
 	print(contents)
-	stmt_list, env = runParseLines(contents, [], {}, 1)
+	#stmt_list, env = parseLines(contents, [], {})
 
 
 
