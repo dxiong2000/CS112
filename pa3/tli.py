@@ -136,6 +136,8 @@ class Stmt :
 				symTable[self.var] = float(i)
 
 			return (inputList, output, symTable, lineNum+1)
+		elif self.keyword == 'no-op':
+			return (inputList, output, symTable, lineNum+1)
 
 
 def parseLine(lines, stmtList, symTable):
@@ -145,6 +147,9 @@ def parseLine(lines, stmtList, symTable):
 		return (stmtList, symTable)
 
 	for i, line in enumerate(lines):
+		if len(line) == 0:
+			stmtList.append(Stmt(keyword="no-op"))
+			continue
 		lineNum = i + 1
 		if line[0].endswith(':'): # if the line starts with a label, remove label and run parseStmt on rest of the line
 			symTable[line[0]] = lineNum
@@ -199,7 +204,7 @@ def parseStmt(line, lineNum):
 	elif line[0] == 'input':
 		return Stmt(keyword=line[0], var=line[1])
 	else:
-		print("Syntax error on line", lineNum)
+		sys.exit("Syntax error on line {}".format(lineNum))
 
 def parseExpr(tokens):
 	""" parses each expression and returns Expr object """
@@ -275,8 +280,10 @@ if __name__ == '__main__':
 			tokens = line.strip('\n').strip('\t').strip('\r').split()
 			contents.append(tokens)
 	
+
 	# gets parsed list of statements and symtable with label-linenum pairs
 	stmt_list, symTable = parseLine(contents, [], {})
+
 
 	output = ''
 	lineNum = 1
