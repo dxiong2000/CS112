@@ -175,7 +175,7 @@ def parseStmtPrintHelper(tokens):
 			else:
 				exprList.append(parseExpr(curExpr))
 		
-		if s.endswith(','):
+		if s.endswith(','): # if current token is the end of an expr, then parse the expr and reset the curExpr list
 			if s[-2] == '"':
 				string = ' '.join(curExpr).replace(',', '')
 				exprList.append(parseExpr(list([string])))
