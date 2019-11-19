@@ -171,12 +171,15 @@ def parseLine(lines, stmtList, symTable):
 
 	return (stmtList, symTable)
 
+def parseStmtPrintHelper(tokens):
+	
+
 def parseStmt(line, lineNum):
 	if line[0] == 'let' and line[2] == '=':
 		e = parseExpr(line[3:])
 		return Stmt(keyword=line[0], var=line[1], exprs=e)
 	elif line[0] == 'print':
-		exprList = parseExpr(line[1:])
+		exprList = parseStmtPrintHelper(line[1:])
 		return Stmt(keyword=line[0], exprs=exprList)
 	elif line[0] == 'if' and line[-2] == 'goto':
 		e = parseExpr(line[1:-2])
@@ -199,10 +202,19 @@ if __name__ == '__main__':
 	infile = sys.argv[1]
 	with open(infile, "r+") as fin:
 		# contents is a 2D list, where each row is a line, with line number zero indexed
-		contents = [line.strip('\n').strip('\t').strip('\r').split() for line in fin.readlines()]
-
+		contents = []
+		for line in fin.readlines():
+			line = line.replace('"', '')
+			tokens = line.strip('\n').strip('\t').strip('\r').split()
+			contents.append(tokens)
+		
 	print(contents)
-	#stmt_list, env = parseLines(contents, [], {})
+	stmt_list, env = parseLine(contents, [], {})
+
+	print(env)
+	for stmt in stmt_list:
+		print(stmt)
+
 
 
 
