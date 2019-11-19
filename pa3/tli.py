@@ -267,9 +267,11 @@ if __name__ == '__main__':
 	# takes in user input
 	inputList = []
 	for line in stdin:
-		if line == "\n":
+		if line == '\n' or line == '':
 			break
-		inputList.append(float(line))
+		inputString = line.split()
+		for s in inputString:
+			inputList.append(float(s))
 
 	# reads file
 	infile = sys.argv[1]
