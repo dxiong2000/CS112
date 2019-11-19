@@ -81,8 +81,7 @@ def parseExpr(tokens):
 		elif x.isnumeric(): # if the token is a number
 			return Expr(op1=float(x), operator='constant')
 		else:
-			print("Error message here maybe")
-			return [Expr(operator='ExprError')]
+			return Expr(op1=x.replace('"', ''), operator='printstring')
 
 	# if actual expression
 	if tokens[1] == '+':
@@ -143,7 +142,7 @@ class Stmt :
 			others = others + " " + str(self.exprs)
 		elif self.keyword == 'print':
 			for exp in self.exprs:
-				others = others + " " + str(self.exprs)
+				others = others + " " + str(exp)
 		elif self.keyword == 'if':
 			others = others + " " + str(self.exprs)
 			others = others + ' goto ' + self.gotoLabel
@@ -172,7 +171,29 @@ def parseLine(lines, stmtList, symTable):
 	return (stmtList, symTable)
 
 def parseStmtPrintHelper(tokens):
-	
+	curExpr = []
+	exprList = []
+	while len(tokens) != 0:
+		s = tokens.pop(0)
+		curExpr.append(s)
+		if len(tokens) == 0: # if only one thing left in tokens list
+			if s.endswith('"'):
+				string = ' '.join(curExpr).replace(',', '')
+				exprList.append(parseExpr(list([string])))
+			else:
+				exprList.append(parseExpr(curExpr))
+		
+		
+		if s.endswith(','):
+			if s[-2] == '"':
+				string = ' '.join(curExpr).replace(',', '')
+				exprList.append(parseExpr(list([string])))
+			else:
+				exprList.append(parseExpr(curExpr))
+
+			curExpr = []
+
+	return exprList
 
 def parseStmt(line, lineNum):
 	if line[0] == 'let' and line[2] == '=':
@@ -204,7 +225,6 @@ if __name__ == '__main__':
 		# contents is a 2D list, where each row is a line, with line number zero indexed
 		contents = []
 		for line in fin.readlines():
-			line = line.replace('"', '')
 			tokens = line.strip('\n').strip('\t').strip('\r').split()
 			contents.append(tokens)
 		
