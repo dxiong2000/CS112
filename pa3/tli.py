@@ -43,11 +43,6 @@ class Expr:
 				return 1
 			else:
 				return 0
-		elif self.operator == "lt":
-			if self.op1 < self.op2:
-				return 1
-			else:
-				return 0
 		elif self.operator == "gt":
 			if self.op1 > self.op2:
 				return 1
@@ -82,14 +77,56 @@ def parseExpr(tokens):
 	if len(tokens) == 1: 
 		x = tokens[0]
 		if x[0].isalpha(): # if the token is a variable
-			return list([Expr(op1=x, operator='var')])
+			return Expr(op1=x, operator='var')
 		elif x.isnumeric(): # if the token is a number
-			return list([Expr(op1=float(x), operator='constant')])
+			return Expr(op1=float(x), operator='constant')
 		else:
 			print("Error message here maybe")
 			return [Expr(operator='ExprError')]
 
-	
+	# if actual expression
+	if tokens[1] == '+':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='plus',op2=e2)
+	elif tokens[1] == '-':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='minus',op2=e2)
+	elif tokens[1] == '*':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='mult',op2=e2)
+	elif tokens[1] == '/':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='div',op2=e2)
+	elif tokens[1] == '<':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='lt',op2=e2)
+	elif tokens[1] == '>':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='gt',op2=e2)
+	elif tokens[1] == '<=':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='le',op2=e2)
+	elif tokens[1] == '>=':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='ge',op2=e2)
+	elif tokens[1] == '==':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='eq',op2=e2)
+	elif tokens[1] == '!=':
+		e1 = parseExpr(tokens[:1])
+		e2 = parseExpr(tokens[2:])
+		return Expr(op1=e1, operator='neq',op2=e2)
+	else: 
+		...
 
 # used to store a parsed TL statement
 class Stmt :
@@ -103,14 +140,12 @@ class Stmt :
 		others = ""
 		if self.keyword == 'let':
 			others = others + " " + self.var
-			for exp in self.exprs:
-				others = others + " " + str(exp)
+			others = others + " " + str(self.exprs)
 		elif self.keyword == 'print':
 			for exp in self.exprs:
-				others = others + " " + str(exp)
+				others = others + " " + str(self.exprs)
 		elif self.keyword == 'if':
-			for exp in self.exprs:
-				others = others + " " + str(exp)
+			others = others + " " + str(self.exprs)
 			others = others + ' goto ' + self.gotoLabel
 		elif self.keyword == 'input':
 			others = others + " " + self.var
@@ -137,15 +172,15 @@ def parseLine(lines, stmtList, symTable):
 	return (stmtList, symTable)
 
 def parseStmt(line, lineNum):
-	if line[0] == 'let' and line[-2] == '=':
-		exprList = parseExpr(line[-1])
-		return Stmt(keyword=line[0], var=line[1], exprs=exprList)
+	if line[0] == 'let' and line[2] == '=':
+		e = parseExpr(line[3:])
+		return Stmt(keyword=line[0], var=line[1], exprs=e)
 	elif line[0] == 'print':
 		exprList = parseExpr(line[1:])
 		return Stmt(keyword=line[0], exprs=exprList)
 	elif line[0] == 'if' and line[-2] == 'goto':
-		exprList = parseExpr(line[1:-2])
-		return Stmt(keyword=line[0], gotoLabel=line[-1], exprs=exprList)
+		e = parseExpr(line[1:-2])
+		return Stmt(keyword=line[0], gotoLabel=line[-1], exprs=e)
 	elif line[0] == 'input':
 		return Stmt(keyword=line[0], var=line[1])
 	else:
