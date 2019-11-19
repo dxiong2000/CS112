@@ -2,7 +2,7 @@
 '''
 Daniel Xiong dxiong5@ucsc.edu id#1660652
 tli.py
-Pair Programming partner: Scott Zin nzin@ucsc.edu id#1679510
+Due 11/22/2019
 '''
 import fileinput
 import io
