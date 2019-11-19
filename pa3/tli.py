@@ -31,40 +31,40 @@ class Expr:
 		elif self.operator == "constant":
 			return self.op1
 		elif self.operator == "plus":
-			return symTable[self.op1]+symTable[self.op2]
+			return self.op1.eval(symTable)+self.op2.eval(symTable)
 		elif self.operator == "minus":
-			return symTable[self.op1]-symTable[self.op2]
+			return self.op1.eval(symTable)-self.op2.eval(symTable)
 		elif self.operator == "mult":
-			return symTable[self.op1]*symTable[self.op2]
+			return self.op1.eval(symTable)*self.op2.eval(symTable)
 		elif self.operator == "div":
-			return symTable[self.op1]/symTable[self.op2]
+			return self.op1.eval(symTable)/self.op2.eval(symTable)
 		elif self.operator == "lt":
-			if self.op1 < self.op2:
+			if self.op1.eval(symTable) < self.op2.eval(symTable):
 				return 1
 			else:
 				return 0
 		elif self.operator == "gt":
-			if self.op1 > self.op2:
+			if self.op1.eval(symTable) > self.op2.eval(symTable):
 				return 1
 			else:
 				return 0
 		elif self.operator == "le":
-			if self.op1 <= self.op2:
+			if self.op1.eval(symTable) <= self.op2.eval(symTable):
 				return 1
 			else:
 				return 0
 		elif self.operator == "ge":
-			if self.op1 >= self.op2:
+			if self.op1.eval(symTable) >= self.op2.eval(symTable):
 				return 1
 			else:
 				return 0
 		elif self.operator == "eq":
-			if self.op1 == self.op2:
+			if self.op1.eval(symTable) == self.op2.eval(symTable):
 				return 1
 			else:
 				return 0
 		elif self.operator == "neq":
-			if self.op1 != self.op2:
+			if self.op1.eval(symTable) != self.op2.eval(symTable):
 				return 1
 			else:
 				return 0
@@ -151,8 +151,21 @@ class Stmt :
 		return self.keyword + others
 
 	# perform/execute this statement given the environment of the symTable
-	def perform(self, symTable):
+	def perform(self, inputList, output, symTable, lineNum):
 		print ("Doing: " + str(self))
+		if self.keyword == 'let':
+			symTable[self.var] = self.exprs.eval(symTable)
+			return (inputList, output, symTable, lineNum+1)
+		elif self.keyword == 'print':
+		elif self.keyword == 'if':
+		elif self.keyword == 'input':
+			if len(inputList) == 0:
+				sys.exit("Illegal or missing input")
+			else:
+				i = inputList.pop(0)
+				symTable[self.var] = float(i)
+
+			return (inputList, output, symTable, lineNum+1)
 
 
 def parseLine(lines, stmtList, symTable):
@@ -210,7 +223,6 @@ def parseStmt(line, lineNum):
 	else:
 		print("Syntax error on line", lineNum)
 
-
 if __name__ == '__main__':
 	# takes in user input
 	inputList = []
@@ -229,14 +241,19 @@ if __name__ == '__main__':
 			contents.append(tokens)
 		
 	print(contents)
-	stmt_list, env = parseLine(contents, [], {})
+	stmt_list, symTable = parseLine(contents, [], {})
 
-	print(env)
+	print(symTable)
 	for stmt in stmt_list:
 		print(stmt)
 
+	output = ''
+	lineNum = 1
+	stmt_list.insert(0,None) # 1 indexing
+	while lineNum < len(stmt_list):
+		inputList, output, symTable, lineNum = stmt_list[lineNum].perform(inputList=inputList, output=output, symTable=symTable, lineNum=lineNum)
 
-
+	print(output)
 
 
 	
