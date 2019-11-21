@@ -7,7 +7,6 @@ Due 11/22/2019
 import fileinput
 import io
 import sys
-from sys import stdin
 
 # used to store a parsed TL expressions which are
 # constant numbers, constant strings, variable names, and binary expressions
@@ -36,7 +35,8 @@ class Expr:
 			if self.op1 in symTable:
 				return symTable[self.op1]
 			else:
-				sys.exit("Undefined variable {} at line {}".format(self.op1, lineNum))
+				print("Undefined variable {} at line {}.".format(self.op1, lineNum))
+				sys.exit()
 		elif self.operator == "constant":
 			return self.op1
 		elif self.operator == "printstring":
@@ -80,8 +80,18 @@ class Expr:
 			else:
 				return 0
 		else:
-			sys.exit("Syntax error on line", lineNum)
+			print("Syntax error on line {}.".format(lineNum))
+			sys.exit()
 
+class Scanner:
+    def __init__(self):
+        self.currentLine = []
+    def readInt(self):
+        if len(self.currentLine) == 0:
+            self.currentLine = input().split()
+        next = self.currentLine[0]
+        self.currentLine = self.currentLine[1:]
+        return next
 
 class Stmt :
 	""" Stmt object """
@@ -107,37 +117,39 @@ class Stmt :
 			others = others + " " + self.var
 		return self.keyword + others
 
-	def perform(self, inputList, output, symTable, lineNum):
+	def perform(self, output, symTable, lineNum, scan):
 		""" performs a Stmt object, returns updated parameters """
 
 		if self.keyword == 'let': # if let statement, update symtable and lineNum and return
 			symTable[self.var] = self.exprs.eval(symTable, lineNum)
-			return (inputList, output, symTable, lineNum+1)
+			return (output, symTable, lineNum+1)
 		elif self.keyword == 'print': # if print statement, update output and lineNum and return
 			for e in self.exprs:
 				if e == self.exprs[-1]:
 					output = output + str(e.eval(symTable, lineNum)) + '\n'
 				else:
 					output = output + str(e.eval(symTable, lineNum)) + ' '
-			return (inputList, output, symTable, lineNum+1)
+			return (output, symTable, lineNum+1)
 		elif self.keyword == 'if': # if ifgoto statement, check if label is in symtable and update lineNum and return
 			if self.exprs.eval(symTable, lineNum) != 0:
 				if self.gotoLabel in symTable:
-					return (inputList, output, symTable, symTable[self.gotoLabel])
+					return (output, symTable, symTable[self.gotoLabel])
 				else:
+					print("Illegal goto {} at line {}.".format(self.gotoLabel[:-1], lineNum))
 					sys.exit("Illegal goto {} at line {}.".format(self.gotoLabel[:-1], lineNum))
 			else:
-				return (inputList, output, symTable, lineNum+1)
-		elif self.keyword == 'input': # if input statement, update symtable and inputlist and return
-			if len(inputList) == 0:
-				sys.exit("Illegal or missing input")
-			else:
-				i = inputList.pop(0)
-				symTable[self.var] = float(i)
+				return (output, symTable, lineNum+1)
+		elif self.keyword == 'input': # if input statement, update symtable and return
+			try:
+				i = float(scan.readInt())
+			except:
+				print('Illegal or missing input.')
+				sys.exit()
+			symTable[self.var] = i
 
-			return (inputList, output, symTable, lineNum+1)
+			return (output, symTable, lineNum+1)
 		elif self.keyword == 'no-op':
-			return (inputList, output, symTable, lineNum+1)
+			return (output, symTable, lineNum+1)
 
 
 def parseLine(lines, stmtList, symTable):
@@ -160,31 +172,44 @@ def parseLine(lines, stmtList, symTable):
 
 	return (stmtList, symTable)
 
-def parseStmtPrintHelper(tokens):
+def parseStmtPrintHelper(tokens, lineNum):
 	""" helper function for parseStmt, handles print statement """
 
 	curExpr = []
 	exprList = []
 	while len(tokens) != 0:
 		s = tokens.pop(0)
-		curExpr.append(s)
-		if len(tokens) == 0: # if only one thing left in tokens list
-			if s.endswith('"'):
-				string = ' '.join(curExpr).replace(',', '')
-				exprList.append(parseExpr(list([string])))
-			else:
-				exprList.append(parseExpr(curExpr))
 		
-		if s.endswith(','): # if current token is the end of an expr, then parse the expr and reset the curExpr list
-			if s[-2] == '"':
-				string = ' '.join(curExpr).replace(',', '')
-				exprList.append(parseExpr(list([string])))
+		if len(tokens) == 0: # if only one thing left in tokens list
+			curExpr.append(s)
+			if s.endswith('"'):
+				string = ' '.join(curExpr)
+				exprList.append(parseExpr(list([string]), lineNum))
 			else:
-				string = ' '.join(curExpr).replace(',', '')
-				curExpr = string.split()
-				exprList.append(parseExpr(curExpr))
-
+				exprList.append(parseExpr(curExpr, lineNum))
+		
+		if s == ',': # if current token is the end of an expr, then parse the expr and reset the curExpr list
+			if curExpr[-1].endswith('"'):
+				string = ' '.join(curExpr)
+				exprList.append(parseExpr(list([string]), lineNum))
+			else:
+				exprList.append(parseExpr(curExpr, lineNum))
 			curExpr = []
+		elif s.endswith(','): # if current token is the end of an expr, then parse the expr and reset the curExpr list
+			curExpr.append(s)
+			if s[-2] == '"':
+				string = ' '.join(curExpr).strip(',')
+				exprList.append(parseExpr(list([string]), lineNum))
+				curExpr = []
+			elif curExpr[0][0] != '"':
+				string = ' '.join(curExpr).strip(',')
+				curExpr = string.split()
+				exprList.append(parseExpr(curExpr, lineNum))
+				curExpr = []
+		else:
+			curExpr.append(s)
+
+
 
 	return exprList
 
@@ -192,21 +217,22 @@ def parseStmt(line, lineNum):
 	""" identifies statement type and returns Stmt object """ 
 
 	if line[0] == 'let' and line[2] == '=':
-		e = parseExpr(line[3:])
+		e = parseExpr(line[3:], lineNum)
 		return Stmt(keyword=line[0], var=line[1], exprs=e)
 	elif line[0] == 'print':
-		exprList = parseStmtPrintHelper(line[1:])
+		exprList = parseStmtPrintHelper(line[1:], lineNum)
 		return Stmt(keyword=line[0], exprs=exprList)
 	elif line[0] == 'if' and line[-2] == 'goto':
-		e = parseExpr(line[1:-2])
+		e = parseExpr(line[1:-2], lineNum)
 		l = line[-1] + ':'
 		return Stmt(keyword=line[0], gotoLabel=l, exprs=e)
 	elif line[0] == 'input':
 		return Stmt(keyword=line[0], var=line[1])
 	else:
-		sys.exit("Syntax error on line {}".format(lineNum))
+		print("Syntax error on line {}.".format(lineNum))
+		sys.exit()
 
-def parseExpr(tokens):
+def parseExpr(tokens, lineNum):
 	""" parses each expression and returns Expr object """
 
 	# if there is only one token
@@ -217,61 +243,54 @@ def parseExpr(tokens):
 		elif x.isnumeric(): # if the token is a number
 			return Expr(op1=float(x), operator='constant')
 		else: # token must be a print string
-			return Expr(op1=x.replace('"', ''), operator='printstring')
+			return Expr(op1=x.strip('"'), operator='printstring')
 
 	# if actual expression
 	if tokens[1] == '+':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='plus',op2=e2)
 	elif tokens[1] == '-':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='minus',op2=e2)
 	elif tokens[1] == '*':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='mult',op2=e2)
 	elif tokens[1] == '/':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='div',op2=e2)
 	elif tokens[1] == '<':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='lt',op2=e2)
 	elif tokens[1] == '>':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='gt',op2=e2)
 	elif tokens[1] == '<=':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='le',op2=e2)
 	elif tokens[1] == '>=':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='ge',op2=e2)
 	elif tokens[1] == '==':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='eq',op2=e2)
 	elif tokens[1] == '!=':
-		e1 = parseExpr(tokens[:1])
-		e2 = parseExpr(tokens[2:])
+		e1 = parseExpr(tokens[:1], lineNum)
+		e2 = parseExpr(tokens[2:], lineNum)
 		return Expr(op1=e1, operator='neq',op2=e2)
 	else: 
-		...
+		print("Syntax error on line {}.".format(lineNum))
+		sys.exit()
 
 if __name__ == '__main__':
-	# takes in user input
-	inputList = []
-	for line in stdin:
-		if line == '\n' or line == '':
-			break
-		inputString = line.split()
-		for s in inputString:
-			inputList.append(float(s))
 
 	# reads file
 	infile = sys.argv[1]
@@ -281,18 +300,17 @@ if __name__ == '__main__':
 		for line in fin.readlines():
 			tokens = line.strip('\n').strip('\t').strip('\r').split()
 			contents.append(tokens)
-	
 
 	# gets parsed list of statements and symtable with label-linenum pairs
 	stmt_list, symTable = parseLine(contents, [], {})
 
-
+	scan = Scanner()
 	output = ''
 	lineNum = 1
 	stmt_list.insert(0,None) # 1 indexing
 	while lineNum < len(stmt_list):
 		# executes each statement
-		inputList, output, symTable, lineNum = stmt_list[lineNum].perform(inputList=inputList, output=output, symTable=symTable, lineNum=lineNum)
+		output, symTable, lineNum = stmt_list[lineNum].perform(output=output, symTable=symTable, lineNum=lineNum, scan=scan)
 
 	# prints final output
 	print(output, end='')
