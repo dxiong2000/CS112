@@ -209,8 +209,6 @@ def parseStmtPrintHelper(tokens, lineNum):
 		else:
 			curExpr.append(s)
 
-
-
 	return exprList
 
 def parseStmt(line, lineNum):
