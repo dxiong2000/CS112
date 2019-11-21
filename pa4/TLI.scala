@@ -15,8 +15,15 @@ case class Print(exprList: List[Expr]) extends Stmt
 object TLI {
     def eval(expr: Expr, symTab: Map[String, Double]): Double = expr match {
         case BinOp("+",e1,e2) => eval(e1,symTab) + eval(e2,symTab) 
+        case BinOp("-",e1,e2) => eval(e1,symTab) - eval(e2,symTab) 
+        case BinOp("*",e1,e2) => eval(e1,symTab) * eval(e2,symTab) 
+        case BinOp("/",e1,e2) => eval(e1,symTab) / eval(e2,symTab) 
+        case BinOp("<",e1,e2) if eval(e1,symTab) < eval(e2,symTab) => 1
+        case BinOp("<",e1,e2) if eval(e1,symTab) >= eval(e2,symTab) => 0
+        case BinOp(">",e1,e2) => eval(e1,symTab) - eval(e2,symTab) 
         case Var(name) => symTab(name)
         case Constant(num) => num
+        case _ => println("error")
 	case _ => 0 // should really throw an error
     }
 
