@@ -1,0 +1,6 @@
+	input start
+	input end
+	let x = start
+repeat: print "done" , x
+	let x = x + 1
+	if x < end goto repeat
