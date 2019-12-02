@@ -90,7 +90,6 @@ object TLI {
                     stmtList.append(No_Op())
                     break
                 }
-
                 lineNum = i + 1
                 if(line(0).endsWith(":")){
                     symTable(line(0)) = lineNum
@@ -99,12 +98,9 @@ object TLI {
                 else{
                     statement = parseStmt(line, lineNum).get
                 }
-
                 stmtList.append(statement)
             }
-            
         }
-        
         return (stmtList, symTable)
     }
 
@@ -152,7 +148,6 @@ object TLI {
                 curExpr.append(s)
             }
         }
-
         return exprList
     }
 
