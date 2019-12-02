@@ -20,7 +20,7 @@ case class No_Op() extends Stmt
 
 object TLI {
     def eval(expr: Expr, symTable: Map[String, Double], lineNum: Int): Option[Either[String, Double]] = expr match {
-        case BinOp("+",e1,e2) => Some(Right(eval(e1,symTable,lineNum).get.right.get + eval(e2,symTable,lineNum).get.right.get))
+        case BinOp("+",e1,e2) => Some(Right(eval(e1,symTable,lineNum).get.right.get + eval(e2,symTable,lineNum).get.right.get)) // this is ugly
         case BinOp("-",e1,e2) => Some(Right(eval(e1,symTable,lineNum).get.right.get - eval(e2,symTable,lineNum).get.right.get))
         case BinOp("*",e1,e2) => Some(Right(eval(e1,symTable,lineNum).get.right.get * eval(e2,symTable,lineNum).get.right.get))
         case BinOp("/",e1,e2) => Some(Right(eval(e1,symTable,lineNum).get.right.get / eval(e2,symTable,lineNum).get.right.get))
