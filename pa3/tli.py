@@ -136,7 +136,7 @@ class Stmt :
 					return (output, symTable, symTable[self.gotoLabel])
 				else:
 					print("Illegal goto {} at line {}.".format(self.gotoLabel[:-1], lineNum))
-					sys.exit("Illegal goto {} at line {}.".format(self.gotoLabel[:-1], lineNum))
+					sys.exit()
 			else:
 				return (output, symTable, lineNum+1)
 		elif self.keyword == 'input': # if input statement, update symtable and return
