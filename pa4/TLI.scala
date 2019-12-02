@@ -78,27 +78,80 @@ object TLI {
 
     def parseStmt(line: Array[String], lineNum: Int): Option[Stmt] = line match {
         case Array("let", v, "=", rest @ _*) => // Let(variable: String, expr: Expr)
-            var expr = parseExpr(rest.toArray, lineNum)
+            var expr = parseExpr(rest.toArray, lineNum).get
             return Some(Let(v, expr))
         case Array("print", rest @ _*) => // Print(exprList: List[Expr])
             var exprList = parseStmtPrintHelper(rest.toArray, lineNum)
             return Some(Print(exprList))
         case Array("if", op1, operator, op2, "goto", label) => // If(expr: Expr, label: String) 
-            var expr = parseExpr(Array(op1,operator,op2), lineNum)
+            var expr = parseExpr(Array(op1,operator,op2), lineNum).get
             return Some(If(expr, label))
         case Array("if", op, "goto", label) => // If(expr: Expr, label: String) 
-            var expr = parseExpr(Array(op), lineNum)
+            var expr = parseExpr(Array(op), lineNum).get
             return Some(If(expr, label))
         case Array("input", v) => // Input(variable: String)
             return Some(Input(v))
-        case _ => 
+        case _ => // otherwise, error
             println(s"Syntax error on line $lineNum")
             System.exit(0)
             None
     }
 
-    def parseExpr(tokens: Array[String], lineNum: Int): Expr = {
-        
+    def parseExpr(tokens: Array[String], lineNum: Int): Option[Expr] = tokens match{
+        case Array(v) => // matches to singular token -> either Constant, Variable, or String
+            if (v(0).isLetter){
+                return Some(Var(v))
+            }
+            else if (v(0).isDigit){
+                return Some(Constant(v.toDouble))
+            }
+            else {
+                return Some(Str(v.stripPrefix("\"").stripSuffix("\"")))
+            }
+        case Array(op1, "+", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp("+", e1, e2))
+        case Array(op1, "-", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp("-", e1, e2))
+        case Array(op1, "*", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp("*", e1, e2))
+        case Array(op1, "/", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp("/", e1, e2))
+        case Array(op1, "<", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp("<", e1, e2))
+        case Array(op1, ">", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp(">", e1, e2))
+        case Array(op1, "<=", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp("<=", e1, e2))
+        case Array(op1, ">=", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp(">=", e1, e2))
+        case Array(op1, "==", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp("==", e1, e2))
+        case Array(op1, "!=", op2) => 
+            var e1 = parseExpr(Array(op1), lineNum).get
+            var e2 = parseExpr(Array(op2), lineNum).get
+            return Some(BinOp("!=", e1, e2))
+        case _ =>
+            println(s"Syntax error on line $lineNum")
+            System.exit(0)
+            None
     }
 
     def main(args: Array[String]) {
