@@ -1,6 +1,6 @@
 import scala.collection.mutable.Map
-import scala.io.Source
 import scala.collection.mutable.ArrayBuffer
+import scala.io.Source
 import util.control.Breaks._
 
 abstract class Expr
@@ -72,13 +72,19 @@ object TLI {
         return (stmtList, symTable)
     }
 
-    def parseStmtPrintHelper(tokens: Array[String], lineNum: Int): ArrayBuffer[Expr] = {
-        new ArrayBuffer[Expr]()
+    def parseStmtPrintHelper(tokens: ArrayBuffer[String], lineNum: Int): ArrayBuffer[Expr] = {
+        var curExpr = new ArrayBuffer[String]()
+        var exprList = new ArrayBuffer[Expr]()
+        while (!tokens.isEmpty){
+            s = tokens.remove(0)
+
+            if tokens.isEmpty
+        }
     }
 
     def parseStmt(line: Array[String], lineNum: Int): Option[Stmt] = line match {
         case Array("let", v, "=", rest @ _*) => // Let(variable: String, expr: Expr)
-            var expr = parseExpr(rest.toArray, lineNum).get
+            var expr = parseExpr(rest.toBuffer, lineNum).get
             return Some(Let(v, expr))
         case Array("print", rest @ _*) => // Print(exprList: List[Expr])
             var exprList = parseStmtPrintHelper(rest.toArray, lineNum)
