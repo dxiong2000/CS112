@@ -1,3 +1,9 @@
+/*
+ * Daniel Xiong dxiong5@ucsc.edu id#1660652
+ * TLI.scala
+ * Due 12/6/2019
+*/
+
 import scala.collection.mutable.Map
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.StringBuilder
