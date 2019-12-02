@@ -5,7 +5,7 @@ import util.control.Breaks._
 
 abstract class Expr
 case class Var(name: String) extends Expr
-case class Str(name: String) extends Expr
+case class PrintStr(name: String) extends Expr
 case class Constant(num: Double) extends Expr
 case class BinOp(operator: String, op1: Expr, op2: Expr) extends Expr
 
@@ -58,7 +58,7 @@ object TLI {
                 lineNum = i + 1
                 if(line(0).endsWith(":")){
                     symTable(line(0)) = lineNum
-                    statement = parseStmt(line.slice(1, line.length-1), lineNum).get
+                    statement = parseStmt(line.drop(1), lineNum).get
                 }
                 else{
                     statement = parseStmt(line, lineNum).get
@@ -76,18 +76,56 @@ object TLI {
         var curExpr = new ArrayBuffer[String]()
         var exprList = new ArrayBuffer[Expr]()
         while (!tokens.isEmpty){
-            s = tokens.remove(0)
+            var s = tokens.remove(0)
 
-            if tokens.isEmpty
+            if (tokens.isEmpty){ // if the list is now empty after removing a token
+                curExpr.append(s)
+                if (s.endsWith("\"")){ // if the token ends with a ", 
+                    var str = curExpr.mkString(" ")
+                    exprList.append(parseExpr(Array(str), lineNum).get)
+                }
+                else{
+                    exprList.append(parseExpr(curExpr.toArray, lineNum).get)
+                }
+            }
+
+            if (s == ","){ // if current token is the end of an expr, then parse the expr and reset the curExpr list
+                if (curExpr.last.endsWith("\"")){
+                    var str = curExpr.mkString(" ")
+                    exprList.append(parseExpr(Array(str), lineNum).get)
+                }
+                else{
+                    exprList.append(parseExpr(curExpr.toArray, lineNum).get)
+                }
+                curExpr = ArrayBuffer.empty[String]
+            }
+            else if (s.endsWith(",")){
+                curExpr.append(s)
+                if (s(s.length-2) == '"'){
+                    var str = curExpr.mkString(" ").stripSuffix(",")
+                    exprList.append(parseExpr(Array(str), lineNum).get)
+                    curExpr = ArrayBuffer.empty[String]
+                }
+                else if (curExpr(0)(0) != '"'){
+                    var str = curExpr.mkString(" ").stripSuffix(",")
+                    exprList.append(parseExpr(str.split(" "), lineNum).get)
+                    curExpr = ArrayBuffer.empty[String]
+                }
+            }
+            else{
+                curExpr.append(s)
+            }
         }
+
+        return exprList
     }
 
     def parseStmt(line: Array[String], lineNum: Int): Option[Stmt] = line match {
         case Array("let", v, "=", rest @ _*) => // Let(variable: String, expr: Expr)
-            var expr = parseExpr(rest.toBuffer, lineNum).get
+            var expr = parseExpr(rest.toArray, lineNum).get
             return Some(Let(v, expr))
         case Array("print", rest @ _*) => // Print(exprList: List[Expr])
-            var exprList = parseStmtPrintHelper(rest.toArray, lineNum)
+            var exprList = parseStmtPrintHelper(rest.to[ArrayBuffer], lineNum)
             return Some(Print(exprList))
         case Array("if", op1, operator, op2, "goto", label) => // If(expr: Expr, label: String) 
             var expr = parseExpr(Array(op1,operator,op2), lineNum).get
@@ -98,7 +136,7 @@ object TLI {
         case Array("input", v) => // Input(variable: String)
             return Some(Input(v))
         case _ => // otherwise, error
-            println(s"Syntax error on line $lineNum")
+            println(s"Syntax error on line $lineNum.")
             System.exit(0)
             None
     }
@@ -112,7 +150,7 @@ object TLI {
                 return Some(Constant(v.toDouble))
             }
             else {
-                return Some(Str(v.stripPrefix("\"").stripSuffix("\"")))
+                return Some(PrintStr(v.stripPrefix("\"").stripSuffix("\"")))
             }
         case Array(op1, "+", op2) => 
             var e1 = parseExpr(Array(op1), lineNum).get
@@ -155,7 +193,7 @@ object TLI {
             var e2 = parseExpr(Array(op2), lineNum).get
             return Some(BinOp("!=", e1, e2))
         case _ =>
-            println(s"Syntax error on line $lineNum")
+            println(s"Syntax error on line $lineNum.")
             System.exit(0)
             None
     }
