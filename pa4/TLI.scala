@@ -73,7 +73,22 @@ object TLI {
     }
 
     def parseStmt(line: Array[String], lineNum: Int): Stmt = {
+        if (line(0) == "let" && line(2) == "="){
+            
+        }
+        else if(line(0) == "print"){
 
+        }
+        else if(line(0) == "if" && line(line.length-2) == "goto"){
+
+        }
+        else if(line(0) == "input"){
+
+        }
+        else{
+            println(s"Syntax error on line $lineNum")
+            System.exit(0)
+        }
     }
 
     def parseExpr(tokens: Array[String], lineNum: Int): Expr = {
