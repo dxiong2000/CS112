@@ -13,7 +13,7 @@ abstract class Stmt
 case class Let(variable: String, expr: Expr) extends Stmt
 case class If(expr: Expr, label: String) extends Stmt
 case class Input(variable: String) extends Stmt
-case class Print(exprList: List[Expr]) extends Stmt
+case class Print(exprList: ArrayBuffer[Expr]) extends Stmt
 case class No_Op() extends Stmt
 
 object TLI {
@@ -56,12 +56,12 @@ object TLI {
                 }
 
                 lineNum = i + 1
-                if(line(0).endsWith(':')){
+                if(line(0).endsWith(":")){
                     symTable(line(0)) = lineNum
-                    statement = parseStmt(line.slice(1, line.length-1), lineNum)
+                    statement = parseStmt(line.slice(1, line.length-1), lineNum).get
                 }
                 else{
-                    statement = parseStmt(line, lineNum)
+                    statement = parseStmt(line, lineNum).get
                 }
 
                 stmtList.append(statement)
@@ -69,30 +69,36 @@ object TLI {
             
         }
         
-        (stmtList, symTable)
+        return (stmtList, symTable)
     }
 
-    def parseStmt(line: Array[String], lineNum: Int): Stmt = {
-        if (line(0) == "let" && line(2) == "="){
-            
-        }
-        else if(line(0) == "print"){
+    def parseStmtPrintHelper(tokens: Array[String], lineNum: Int): ArrayBuffer[Expr] = {
+        new ArrayBuffer[Expr]()
+    }
 
-        }
-        else if(line(0) == "if" && line(line.length-2) == "goto"){
-
-        }
-        else if(line(0) == "input"){
-
-        }
-        else{
+    def parseStmt(line: Array[String], lineNum: Int): Option[Stmt] = line match {
+        case Array("let", v, "=", rest @ _*) => // Let(variable: String, expr: Expr)
+            var expr = parseExpr(rest.toArray, lineNum)
+            return Some(Let(v, expr))
+        case Array("print", rest @ _*) => // Print(exprList: List[Expr])
+            var exprList = parseStmtPrintHelper(rest.toArray, lineNum)
+            return Some(Print(exprList))
+        case Array("if", op1, operator, op2, "goto", label) => // If(expr: Expr, label: String) 
+            var expr = parseExpr(Array(op1,operator,op2), lineNum)
+            return Some(If(expr, label))
+        case Array("if", op, "goto", label) => // If(expr: Expr, label: String) 
+            var expr = parseExpr(Array(op), lineNum)
+            return Some(If(expr, label))
+        case Array("input", v) => // Input(variable: String)
+            return Some(Input(v))
+        case _ => 
             println(s"Syntax error on line $lineNum")
             System.exit(0)
-        }
+            None
     }
 
     def parseExpr(tokens: Array[String], lineNum: Int): Expr = {
-
+        
     }
 
     def main(args: Array[String]) {
