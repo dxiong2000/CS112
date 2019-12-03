@@ -1,0 +1,11 @@
+	let xx = 1
+	let yy = 2
+	let zz = xx * yy
+	let bb = xx / yy
+	let cc = xx - yy
+	let dd = xx / yy
+	print zz
+	print bb
+	print cc
+	print dd
+	print "end"

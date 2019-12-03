@@ -1,0 +1,6 @@
+enterTwoNumbers 
+10.0 
+20.0 
+40.0 
+80.0 
+done 
