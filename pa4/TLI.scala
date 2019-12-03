@@ -297,8 +297,8 @@ object TLI {
 
         // stores tokens in 2d arraybuffer contents
         var contents = new ArrayBuffer[Array[String]]()
-        for (l <- lines){
-            contents.append(l.split(" "))
+        for (line <- lines){
+            contents.append(line.split("\\s+")) // some magic
         }
 
         // passes empty ArrayBuffer and empty Map into parseLine
